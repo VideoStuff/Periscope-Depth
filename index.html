@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Sock Quest: Laundromat of Doom</title>
+<style>
+  html,body{margin:0;height:100%;background:#14101f;color:#eee;font-family:monospace;overflow:hidden;touch-action:none}
+  #wrap{display:flex;flex-direction:column;height:100%;align-items:center}
+  canvas{background:#1b1630;image-rendering:pixelated;max-width:100%;flex:1;min-height:0;aspect-ratio:21/15}
+  #hud{padding:4px 8px;font-size:14px;width:100%;box-sizing:border-box;display:flex;justify-content:space-between;max-width:840px}
+  #log{height:3.6em;overflow:hidden;font-size:13px;width:100%;max-width:840px;padding:0 8px;box-sizing:border-box;color:#b9b0d8}
+  #pad{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,56px);gap:4px;margin:6px}
+  #pad button,#acts button{background:#3a2f66;color:#fff;border:0;border-radius:10px;font-size:22px}
+  #pad button:active,#acts button:active{background:#6a55c8}
+  #acts{display:flex;gap:8px;margin-bottom:6px}
+  #acts button{font-size:15px;padding:8px 12px}
+  #bottom{display:flex;align-items:center;gap:20px}
+  @media(min-width:900px){#bottom{display:none}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud"><span id="hp"></span><span id="st"></span></div>
+  <canvas id="c" width="840" height="600"></canvas>
+  <div id="log"></div>
+  <div id="bottom">
+    <div id="pad">
+      <button data-d="-1,-1">↖</button><button data-d="0,-1">↑</button><button data-d="1,-1">↗</button>
+      <button data-d="-1,0">←</button><button data-d="0,0">·</button><button data-d="1,0">→</button>
+      <button data-d="-1,1">↙</button><button data-d="0,1">↓</button><button data-d="1,1">↘</button>
+    </div>
+    <div id="acts"><button id="bQ">Softener</button><button id="bB">Bleach</button></div>
+  </div>
+</div>
+<script>
+(()=>{
+const W=42,H=30,T=20; // map size, tile px
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+let rng=Math.random;
+const ri=(a,b)=>a+Math.floor(rng()*(b-a+1));
+const pick=a=>a[Math.floor(rng()*a.length)];
+
+const ENEMIES=[
+ {n:'Dust Bunny',g:'🐰',hp:4,at:1,minF:1,spd:1},
+ {n:'Lint Golem',g:'🗿',hp:10,at:2,minF:1,spd:2},
+ {n:'Clothes Moth',g:'🦋',hp:5,at:2,minF:2,spd:1,fly:1},
+ {n:'Rogue Quarter',g:'🪙',hp:6,at:3,minF:2,spd:1},
+ {n:'Soap Slime',g:'🫧',hp:12,at:3,minF:3,spd:2},
+ {n:'Wire Hanger',g:'🪝',hp:9,at:5,minF:4,spd:1},
+ {n:'Angry Iron',g:'♨️',hp:18,at:6,minF:5,spd:2},
+];
+const BOSS={n:'THE GREAT DRYER',g:'🌀',hp:60,at:8,spd:1,boss:1};
+const FLOORS=6;
+const FLOORNAMES=['Lobby','Folding Tables','Vending Corner','Soap Cellar','Lint Trap','The Dryer Core'];
+
+let S; // state
+function newGame(){
+  S={f:1,hp:20,mhp:20,atk:3,coins:0,kills:0,soft:1,bleach:1,shield:0,turn:0,over:0,won:0,log:[],map:null,vis:null,seen:null,ents:[],items:[],px:0,py:0,sx:0,sy:0};
+  genFloor();
+  say('You are a lone sock. Find your pair at the bottom of the dryer!');
+}
+function say(m){S.log.unshift(m);S.log=S.log.slice(0,3);}
+
+function genFloor(){
+  const m=Array.from({length:H},()=>Array(W).fill(1));
+  const rooms=[];
+  for(let i=0;i<40&&rooms.length<9;i++){
+    const w=ri(4,9),h=ri(3,6),x=ri(1,W-w-2),y=ri(1,H-h-2);
+    if(rooms.some(r=>x<r.x+r.w+1&&x+w+1>r.x&&y<r.y+r.h+1&&y+h+1>r.y))continue;
+    rooms.push({x,y,w,h});
+    for(let j=y;j<y+h;j++)for(let k=x;k<x+w;k++)m[j][k]=0;
+  }
+  const c=r=>[r.x+(r.w>>1),r.y+(r.h>>1)];
+  for(let i=1;i<rooms.length;i++){
+    let [ax,ay]=c(rooms[i-1]),[bx,by]=c(rooms[i]);
+    while(ax!==bx){m[ay][ax]=0;ax+=Math.sign(bx-ax);}
+    while(ay!==by){m[ay][ax]=0;ay+=Math.sign(by-ay);}
+  }
+  S.map=m;S.seen=Array.from({length:H},()=>Array(W).fill(0));
+  [S.px,S.py]=c(rooms[0]);
+  const last=rooms[rooms.length-1];
+  [S.sx,S.sy]=c(last);
+  S.ents=[];S.items=[];
+  const free=(r)=>{for(let t=0;t<50;t++){const x=ri(r.x,r.x+r.w-1),y=ri(r.y,r.y+r.h-1);
+    if(!occ(x,y)&&!(x===S.sx&&y===S.sy)&&!(x===S.px&&y===S.py))return[x,y];}return null;};
+  if(S.f===FLOORS){
+    const [bx,by]=c(last);S.ents.push({...BOSS,mhp:BOSS.hp,x:bx,y:by,cd:0});
+    S.sx=-1;
+  }
+  for(let i=1;i<rooms.length;i++){
+    const r=rooms[i],pool=ENEMIES.filter(e=>e.minF<=S.f&&e.minF>=S.f-3);
+    const n=ri(0,2)+(S.f>3?1:0);
+    for(let k=0;k<n;k++){const p=free(r);if(!p)continue;const e=pick(pool);
+      S.ents.push({...e,mhp:e.hp,x:p[0],y:p[1],cd:0,awake:0});}
+    if(rng()<.8){const p=free(r);if(p)S.items.push({x:p[0],y:p[1],t:pick(['coin','coin','coin','soft','bleach','sheet','sock'])});}
+  }
+}
+const occ=(x,y)=>S.ents.find(e=>e.x===x&&e.y===y&&e.hp>0);
+const wall=(x,y)=>x<0||y<0||x>=W||y>=H||S.map[y][x]===1;
+
+function los(x0,y0,x1,y1){
+  let dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1,e=dx-dy;
+  while(x0!==x1||y0!==y1){
+    if((x0!==S.px||y0!==S.py)&&wall(x0,y0))return false;
+    const e2=2*e;if(e2>-dy){e-=dy;x0+=sx;}if(e2<dx){e+=dx;y0+=sy;}
+  }return true;
+}
+function visible(x,y){return Math.hypot(x-S.px,y-S.py)<=8&&los(S.px,S.py,x,y);}
+
+function dmg(a){return Math.max(1,a+ri(-1,1));}
+function hurtPlayer(a,src){
+  let d=dmg(a);
+  if(S.shield>0){S.shield--;d=Math.max(0,d-3);}
+  S.hp-=d;say(`${src} hits you for ${d}.`);
+  if(S.hp<=0){S.hp=0;S.over=1;say('Your sock unravels... You are now lint.');}
+}
+function killEnemy(e){
+  S.kills++;S.coins+=e.boss?100:ri(1,5);say(`${e.n} defeated!`);
+  if(e.boss){S.won=1;S.over=1;say('You found your pair! Matching socks at last!');}
+  else if(rng()<.2)S.items.push({x:e.x,y:e.y,t:pick(['soft','bleach','sheet'])});
+}
+function attack(e){
+  const d=dmg(S.atk);e.hp-=d;e.awake=1;say(`You smack ${e.n} for ${d}.`);
+  if(e.hp<=0)killEnemy(e);
+}
+function tryMove(dx,dy){
+  if(S.over)return;
+  if(dx===0&&dy===0){endTurn();return;}
+  const nx=S.px+dx,ny=S.py+dy;
+  if(wall(nx,ny))return;
+  const e=occ(nx,ny);
+  if(e)attack(e);
+  else{S.px=nx;S.py=ny;pickup();
+    if(nx===S.sx&&ny===S.sy){
+      S.f++;S.hp=Math.min(S.mhp,S.hp+4);genFloor();say(`Down the drain... ${FLOORNAMES[S.f-1]} (floor ${S.f}).`);
+      draw();hud();return;}
+  }
+  endTurn();
+}
+function pickup(){
+  const i=S.items.findIndex(it=>it.x===S.px&&it.y===S.py);if(i<0)return;
+  const it=S.items.splice(i,1)[0];
+  switch(it.t){
+   case'coin':{const v=ri(2,8);S.coins+=v;say(`Found ${v} coins.`);break;}
+   case'soft':S.soft++;say('Picked up Fabric Softener (heals).');break;
+   case'bleach':S.bleach++;say('Picked up Bleach (blasts nearby foes).');break;
+   case'sheet':S.shield+=3;say('Dryer sheet! Next 3 hits are softened.');break;
+   case'sock':S.mhp+=4;S.hp+=4;S.atk++;say('A stray sock! +4 max HP, +1 attack.');break;
+  }
+}
+function useSoft(){
+  if(S.over||S.soft<1)return;S.soft--;const h=Math.min(S.mhp-S.hp,10);S.hp+=h;say(`Softener: +${h} HP. Smells fresh.`);endTurn();
+}
+function useBleach(){
+  if(S.over||S.bleach<1)return;S.bleach--;let n=0;
+  for(const e of S.ents)if(e.hp>0&&Math.hypot(e.x-S.px,e.y-S.py)<=3){
+    const d=e.boss?8:10;e.hp-=d;e.awake=1;n++;if(e.hp<=0)killEnemy(e);}
+  say(`Bleach splash! Hit ${n} foe(s).`);endTurn();
+}
+function endTurn(){
+  S.turn++;
+  if(S.turn%12===0&&S.hp<S.mhp&&!S.over)S.hp++;
+  for(const e of S.ents){
+    if(e.hp<=0||S.over)continue;
+    if(!e.awake&&visible(e.x,e.y))e.awake=1;
+    if(e.boss)e.awake=e.awake||Math.hypot(e.x-S.px,e.y-S.py)<9;
+    if(!e.awake)continue;
+    e.cd++;if(e.cd<e.spd)continue;e.cd=0;
+    const dx=S.px-e.x,dy=S.py-e.y;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<=1){hurtPlayer(e.at,e.n);continue;}
+    const opts=[[Math.sign(dx),Math.sign(dy)],[Math.sign(dx),0],[0,Math.sign(dy)]];
+    for(const[ox,oy]of opts){
+      if(!ox&&!oy)continue;const nx=e.x+ox,ny=e.y+oy;
+      if(wall(nx,ny)||occ(nx,ny)||(nx===S.px&&ny===S.py))continue;
+      e.x=nx;e.y=ny;break;}
+  }
+  if(S.f===FLOORS&&S.ents.some(e=>e.boss&&e.hp>0)&&S.turn%15===0){
+    const b=S.ents.find(e=>e.boss&&e.hp>0);if(b&&b.awake){hurtPlayer(2,'Tumbling heat');}}
+  draw();hud();
+}
+
+function hud(){
+  $('hp').textContent=`❤ ${S.hp}/${S.mhp}  ⚔ ${S.atk}${S.shield?`  🛡${S.shield}`:''}`;
+  $('st').textContent=`F${S.f} ${FLOORNAMES[S.f-1]} | 🪙${S.coins} | 🧴${S.soft} | 🧪${S.bleach}`;
+  $('log').innerHTML=S.log.map(l=>`<div>${l}</div>`).join('');
+}
+function draw(){
+  const vw=cv.width/T,vh=cv.height/T,
+    ox=Math.max(0,Math.min(W-vw,S.px-(vw>>1))),oy=Math.max(0,Math.min(H-vh,S.py-(vh>>1)));
+  ctx.fillStyle='#1b1630';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.font=`${T-4}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  const gl=(g,x,y)=>ctx.fillText(g,(x-ox)*T+T/2,(y-oy)*T+T/2+1);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const v=visible(x,y);if(v)S.seen[y][x]=1;
+    if(!S.seen[y][x])continue;
+    const px=(x-ox)*T,py=(y-oy)*T;
+    ctx.fillStyle=S.map[y][x]?(v?'#5b4a99':'#2c2552'):(v?'#34285c':'#241d40');
+    ctx.fillRect(px,py,T-1,T-1);
+    if(S.map[y][x]===0&&(x+y)%7===0){ctx.fillStyle=v?'#43357a':'#2b2250';ctx.fillRect(px+7,py+7,5,5);}
+  }
+  if(S.seen[S.sy]?.[S.sx]&&S.sx>=0)gl('🕳️',S.sx,S.sy);
+  for(const it of S.items)if(S.seen[it.y][it.x]&&visible(it.x,it.y))
+    gl({coin:'🪙',soft:'🧴',bleach:'🧪',sheet:'📄',sock:'🧦'}[it.t],it.x,it.y);
+  for(const e of S.ents)if(e.hp>0&&visible(e.x,e.y)){
+    gl(e.g,e.x,e.y);
+    if(e.hp<e.mhp){ctx.fillStyle='#e33';ctx.fillRect((e.x-ox)*T,(e.y-oy)*T-1,(T-2)*e.hp/e.mhp,3);}
+  }
+  gl(S.over&&!S.won?'💀':'🧦',S.px,S.py);
+  if(S.over){
+    ctx.fillStyle='rgba(10,5,25,.8)';ctx.fillRect(0,cv.height/2-70,cv.width,140);
+    ctx.fillStyle='#fff';ctx.font='28px monospace';
+    ctx.fillText(S.won?'🎉 REUNITED! YOU WIN 🎉':'THE WASH CYCLE CLAIMS YOU',cv.width/2,cv.height/2-25);
+    ctx.font='16px monospace';
+    ctx.fillText(`Floor ${S.f} · ${S.kills} kills · ${S.coins} coins`,cv.width/2,cv.height/2+10);
+    ctx.fillText('Press R / tap here to try again',cv.width/2,cv.height/2+40);
+  }
+}
+
+const KEYS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
+ w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],k:[0,-1],j:[0,1],h:[-1,0],l:[1,0],
+ y:[-1,-1],u:[1,-1],b:[-1,1],n:[1,1],'.':[0,0],' ':[0,0]};
+addEventListener('keydown',ev=>{
+  const k=ev.key.length>1?ev.key:ev.key.toLowerCase();
+  if(k==='r'&&S.over){newGame();draw();hud();return;}
+  if(k==='q'){useSoft();ev.preventDefault();return;}
+  if(k==='e'){useBleach();ev.preventDefault();return;}
+  if(KEYS[k]){ev.preventDefault();tryMove(...KEYS[k]);}
+});
+document.querySelectorAll('#pad button').forEach(b=>b.addEventListener('click',()=>tryMove(...b.dataset.d.split(',').map(Number))));
+$('bQ').onclick=useSoft;$('bB').onclick=useBleach;
+cv.addEventListener('click',()=>{if(S.over){newGame();draw();hud();}});
+
+newGame();draw();hud();
+})();
+</script>
+</body>
+</html>
