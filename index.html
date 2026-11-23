@@ -631,7 +631,9 @@ function updSub(dt){
   const s=G.sub;
   s.spd += clamp(SPEEDS[s.set]-s.spd, -.45*dt, .35*dt);
   const turn = (inp.port?-1:0)+(inp.stbd?1:0);
-  s.h = wrap360(s.h + turn*(.6+3.6*Math.min(1,s.spd/3))*dt);
+  const dh = turn*(.6+3.6*Math.min(1,s.spd/3))*dt;
+  s.h = wrap360(s.h + dh);
+  G.scopeBrg = wrap360(G.scopeBrg + dh); // the periscope is mounted on the boat, so it swings with her
   s.x += Math.sin(s.h*D2R)*s.spd*dt; s.y += Math.cos(s.h*D2R)*s.spd*dt;
   if(G.land){ const L=G.land, over=(s.x-L.px)*L.nx+(s.y-L.py)*L.ny+250; // keep off the shoals
     if(over>0){ s.x-=L.nx*over; s.y-=L.ny*over; say('shoal','Shoal water! Come about!',10); } }
