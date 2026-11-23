@@ -356,6 +356,17 @@ const S = {
     g.gain.setValueAtTime(.0001,t+.4); g.gain.exponentialRampToValueAtTime(.09,t+.9); g.gain.exponentialRampToValueAtTime(.0001,t+5);
     o.connect(g).connect(uw); o.start(t+.4); o.stop(t+5.1);
   },
+  dc(v,close){ if(!AU.ctx) return; const t=AU.ctx.currentTime, uw=AU.uw, cut=lerp(140,420,close);
+    // main blast: a heavy sub-bass thud and a long, dark rumble rolling through the water
+    tone('sine',48,t,2.4,.9*v,20,uw); noise(t,3.4,.8*v,'lowpass',cut,40,uw);
+    // bubble pulse: underwater blasts "breathe" a second, softer whump a moment later
+    tone('sine',36,t+.34,1.6,.5*v,18,uw); noise(t+.32,2,.4*v,'lowpass',cut*.7,35,uw);
+    // close ones rattle the boat: muted clanks and a groan from the hull
+    if(close>.35){
+      for(let i=0;i<5;i++) tone('triangle',rnd(130,260),t+rnd(.05,.6),rnd(.12,.3),.14*v*close,rnd(70,110),uw);
+      tone('sawtooth',rnd(55,80),t+.5,1.6,.07*v*close,rnd(40,50),uw);
+    }
+  },
   clang(){ if(!AU.ctx) return; const t=AU.ctx.currentTime; tone('triangle',640,t,.7,.3); tone('triangle',953,t,.5,.18); },
   scope(){ if(!AU.ctx) return; const t=AU.ctx.currentTime; tone('sawtooth',105,t,1.1,.06,140); },
   sting(){ if(!AU.ctx) return; const t=AU.ctx.currentTime; tone('sine',196,t,1.2,.22); tone('sine',208,t,1.2,.18); },
@@ -580,7 +591,7 @@ function updCharges(dt){
     if(c.z>=c.setZ){
       G.charges.splice(i,1);
       const h=dist(c.x,c.y,s.x,s.y), v=Math.abs(c.setZ-s.depth), r=Math.hypot(h,v);
-      S.boom(clamp(140/(r+60),.08,1), clamp(2400/(r+20),120,900));
+      S.dc(clamp(140/(r+60),.08,1), clamp(1-r/150,0,1));
       G.shake=Math.max(G.shake, clamp(260/(r+25),0,10));
       G.booms.push({x:c.x,y:c.y,t:G.rt});
       spray(c.x,c.y,rnd(26,40),2.2,true);
