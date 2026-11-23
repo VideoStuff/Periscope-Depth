@@ -56,6 +56,19 @@
   .tube i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(#d7b56b,#9c7c3c)}
   .tube span{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:12px;color:#0b0f0e;mix-blend-mode:normal;z-index:1}
   .tube.empty span{color:var(--muted)}
+  #compassRow{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
+  #compass{width:68px;height:68px;flex:none;display:block}
+  .cdial{fill:#0c1513;stroke:rgba(201,164,92,.45);stroke-width:1.5}
+  #cTicks line{stroke:var(--muted);stroke-width:1}
+  #cTicks line.maj{stroke:var(--paper);stroke-width:1.6}
+  .cdir{fill:var(--muted);font:600 10px var(--body);text-anchor:middle;dominant-baseline:central}
+  .cdir.cn{fill:var(--brass)}
+  .cscope{stroke:var(--paper);stroke-width:1.2;stroke-dasharray:3 3;opacity:.7}
+  .cboat{fill:var(--safe)} .ctower{fill:#0c1513}
+  .hdgbox{min-width:0}
+  .hlbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  #hdgBig{font-size:26px;line-height:1.05;color:var(--paper)}
+  #rudderTxt{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
   #hullbar{height:8px;border-radius:2px;background:#3a1712;margin-top:5px;overflow:hidden}
   #hullfill{height:100%;width:100%;background:var(--safe);transition:width .3s}
   #mapWrap{position:absolute;bottom:10px;right:10px;width:clamp(130px,22%,240px);aspect-ratio:1/1;max-width:100%;
@@ -100,6 +113,7 @@
     .panel{width:clamp(132px,41%,190px);font-size:12px;padding:7px 9px}
     .row b{font-size:12px} #detState{font-size:15px} .opt{display:none}
     #mapWrap{width:clamp(110px,34%,170px)} #mapWrap.big{width:min(92%,420px)}
+    #compass{width:50px;height:50px} #hdgBig{font-size:19px} #compassRow{gap:7px;margin:4px 0 0}
     .cb{min-width:48px;padding:7px 8px;font-size:13px} .cb kbd{display:none} .cb.fire{min-width:76px;font-size:17px}
     #toasts{width:80%;top:auto;bottom:40%}
     .cols{grid-template-columns:1fr}
@@ -142,7 +156,20 @@
       <div class="lbl">Control Room</div>
       <div class="row">Depth <b id="depthTxt" class="num">14 m</b></div>
       <div class="row">Speed <b id="speedTxt">Ahead Slow</b></div>
-      <div class="row opt">Course <b id="hdgTxt" class="num">000°</b></div>
+      <div id="compassRow">
+        <svg id="compass" viewBox="-50 -50 100 100" aria-hidden="true">
+          <circle r="47" class="cdial"></circle>
+          <g id="cTicks"></g>
+          <text y="-35" class="cdir cn">N</text><text x="36" class="cdir">E</text><text y="36" class="cdir">S</text><text x="-36" class="cdir">W</text>
+          <line id="cScope" x1="0" y1="0" x2="0" y2="-46" class="cscope"></line>
+          <g id="cBoat"><path d="M0,-27 L6,-12 L6,18 L0,24 L-6,18 L-6,-12 Z" class="cboat"></path><rect x="-2" y="-6" width="4" height="9" class="ctower"></rect></g>
+        </svg>
+        <div class="hdgbox">
+          <div class="hlbl">Heading</div>
+          <div id="hdgBig" class="num">000°</div>
+          <div id="rudderTxt">Steady</div>
+        </div>
+      </div>
       <div class="row">Hull <b id="hullTxt" class="num">100%</b></div>
       <div id="hullbar"><div id="hullfill"></div></div>
     </section>
@@ -191,7 +218,7 @@ function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/0.5; }
 
 /* ================= constants ================= */
 const SCOPE_DEPTH = 14, DEEP = 70, MAX_SCOPE_DEPTH = 17, MAX_FIRE_DEPTH = 22;
-const TORP_V = 60, TORP_RANGE = 4300, ARM_DIST = 140, RELOAD = 14, RESERVE = 10;
+const TORP_V = 80, TORP_RANGE = 4800, ARM_DIST = 140, RELOAD = 14, RESERVE = 10;
 const SUS = 30, HUNT = 65, DET = 95;
 const SPEEDS = [0, 3, 5, 7];
 const MAXSPD = SPEEDS[3];
@@ -355,6 +382,13 @@ const S = {
     o.frequency.setValueAtTime(260,t+.4); o.frequency.exponentialRampToValueAtTime(190,t+5);
     g.gain.setValueAtTime(.0001,t+.4); g.gain.exponentialRampToValueAtTime(.09,t+.9); g.gain.exponentialRampToValueAtTime(.0001,t+5);
     o.connect(g).connect(uw); o.start(t+.4); o.stop(t+5.1);
+  },
+  thit(v,near){ if(!AU.ctx) return; const t=AU.ctx.currentTime, uw=AU.uw, cut=lerp(110,360,near);
+    // a big warhead heard through the water: a dull, rolling boom with a long tail
+    tone('sine',52,t,2.8,.95*v,22,uw); noise(t,4,.85*v,'lowpass',cut,35,uw);
+    tone('sine',40,t+.4,1.8,.45*v,18,uw); noise(t+.38,2.4,.35*v,'lowpass',cut*.7,30,uw);
+    // the ship's hull tearing and groaning, a few seconds later
+    for(let i=0;i<4;i++) tone('sawtooth',rnd(40,75),t+rnd(1.2,3.2),rnd(.6,1.4),.05*v,rnd(28,40),uw);
   },
   dc(v,close){ if(!AU.ctx) return; const t=AU.ctx.currentTime, uw=AU.uw, cut=lerp(140,420,close);
     // main blast: a heavy sub-bass thud and a long, dark rumble rolling through the water
@@ -643,7 +677,7 @@ function updTorps(dt){
 function hitShip(e,t){
   G.stats.hits++; e.hp--;
   const s=G.sub, d=dist(s.x,s.y,e.x,e.y);
-  S.boom(clamp(900/(d+300),.15,1), clamp(3e6/(d*d+1),200,1100));
+  S.thit(clamp(900/(d+300),.15,1), clamp(1-d/4000,0,1));
   if(d<6000) G.shake=Math.max(G.shake,clamp(3000/(d+200),0,3));
   spray(t.x,t.y,e.T.Hmax*1.3+10,2.6,true);
   for(let i=0;i<14;i++) G.fx.push({x:t.x+rnd(-8,8),y:t.y+rnd(-8,8),z:rnd(2,10),vz:rnd(6,16),r:rnd(5,10),gr:6,life:0,max:rnd(.6,1.3),k:'fire'});
@@ -1098,7 +1132,6 @@ function updHud(){
   // boat
   $('depthTxt').textContent=`${Math.round(s.depth)} m`+(Math.abs(s.depth-s.dTarget)>1?(s.dTarget>s.depth?' ↓':' ↑'):'');
   $('speedTxt').textContent=`${SPEED_NAMES[s.set]} · ${Math.round(s.spd*KN)} kn`;
-  $('hdgTxt').textContent=pad3(s.h)+'°';
   $('hullTxt').textContent=Math.round(s.hull)+'%';
   const hf=$('hullfill'); hf.style.width=s.hull+'%'; hf.style.background=s.hull>60?'var(--safe)':s.hull>30?'var(--warn)':'var(--danger)';
   $('bScope').firstChild.textContent = s.scopeWant?'Lower':'Raise';
@@ -1109,6 +1142,20 @@ function updHud(){
   const L=G.spec||{};
   $('mission').innerHTML=`Patrol <b>${G.level}</b> · ${L.night?'Night':'Day'} · Sunk <b>${fmt(G.total+(G.stats?G.stats.tons:0))} t</b>`;
 }
+
+function updCompass(){
+  const s=G.sub; if(!s) return;
+  $('cBoat').setAttribute('transform',`rotate(${s.h.toFixed(1)})`);
+  $('cScope').setAttribute('transform',`rotate(${G.scopeBrg.toFixed(1)})`);
+  $('hdgBig').textContent=pad3(s.h)+'°';
+  const rt=$('rudderTxt');
+  const txt = inp.port&&!inp.stbd ? '◀ Turning port' : inp.stbd&&!inp.port ? 'Turning stbd ▶' : 'Steady';
+  if(rt.textContent!==txt){ rt.textContent=txt; rt.className = txt==='Steady'?'':'caution'; }
+}
+(function(){ const g=$('cTicks'); let h='';
+  for(let a=0;a<360;a+=10){ if(a%90===0) continue; const maj=a%30===0, r0=maj?38:41, r=46, rad=a*D2R;
+    h+=`<line class="${maj?'maj':''}" x1="${(Math.sin(rad)*r0).toFixed(1)}" y1="${(-Math.cos(rad)*r0).toFixed(1)}" x2="${(Math.sin(rad)*r).toFixed(1)}" y2="${(-Math.cos(rad)*r).toFixed(1)}"></line>`; }
+  g.innerHTML=h; })();
 
 /* ================= screens ================= */
 const ov=$('overlay');
@@ -1285,7 +1332,7 @@ function frame(now){
     if(G.state==='title'){ const tgt=brgTo(0,0,G.group.x,G.group.y); G.scopeBrg=turnToward(G.scopeBrg,tgt,4*dt); }
   }
   G.shake*=Math.pow(.02,dt); G.hurt*=Math.pow(.1,dt);
-  drawScope(); drawMap();
+  drawScope(); drawMap(); updCompass();
   hudT-=dt; if(hudT<=0){ hudT=.1; updHud(); }
   auUpdate();
   requestAnimationFrame(frame);
