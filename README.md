@@ -1,5 +1,7 @@
 # Periscope Depth
 
+Version 1 (shown as **v1** next to the title in the game).
+
 A WW2 submarine stealth game, played through the periscope. North Atlantic, 1942: you command an Allied submarine on a campaign against the German surface fleet. Hunt warships, raid harbours and rescue downed airmen without being found.
 
 ## Play

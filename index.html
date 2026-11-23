@@ -26,6 +26,7 @@
     padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   #top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}
   #brand{font-family:var(--display);font-size:22px;letter-spacing:.06em;color:var(--brass);line-height:1;white-space:nowrap}
+  .ver{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--muted);vertical-align:middle;border:1px solid var(--line);border-radius:5px;padding:1px 5px;margin-left:4px}
   #mission{font-size:15px;color:var(--muted);letter-spacing:.04em;text-align:center;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #mission b{color:var(--paper);font-weight:600}
   #topbtns{display:flex;gap:6px}
@@ -153,7 +154,7 @@
 <body>
 <div id="app">
   <header id="top">
-    <div id="brand">Periscope Depth</div>
+    <div id="brand">Periscope Depth <span id="ver" class="ver"></span></div>
     <div id="mission">North Atlantic · 1942</div>
     <div id="topbtns">
       <button class="ibtn" id="bSound" title="Sound on/off">SND</button>
@@ -244,6 +245,7 @@ const fmt = n => Math.round(n).toLocaleString('en-US');
 const pad3 = n => String(Math.round(wrap360(n))%360).padStart(3,'0');
 function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/0.5; }
 const MONO = "'Share Tech Mono', ui-monospace, Menlo, monospace";
+const VERSION = 'v1';
 
 /* ================= constants ================= */
 const SCOPE_DEPTH = 14, DEEP = 70, MAX_SCOPE_DEPTH = 17, MAX_FIRE_DEPTH = 22;
@@ -1630,7 +1632,7 @@ const GO = {
 function titleScreen(){
   const sv=loadCareer();
   showOverlay(`
-    <h1>Periscope Depth</h1>
+    <h1>Periscope Depth</h1><div class="eyebrow" style="margin-top:6px">Version ${VERSION.slice(1)}</div>
     <div class="sub">North Atlantic, 1942. You command an Allied submarine on a campaign against the German surface fleet. Hunt warships, raid harbours and rescue downed airmen without being found.</div>
     <div class="btnrow">
       ${sv?`<button class="go" data-go="cont">Continue · Mission ${sv.level}</button><button class="go alt" data-go="newgame">New career</button>`:`<button class="go" data-go="newgame">Begin career</button>`}
@@ -1727,7 +1729,7 @@ function gameOver(){
     <button class="go" data-go="retry">New command</button>`);
 }
 function saveBest(){ if(G.total>G.best){ G.best=G.total; try{ localStorage.setItem('periscope-depth-best',String(G.best)); }catch(e){} } }
-function pauseCard(){ showOverlay(`<h2>Paused</h2><div class="eyebrow">Mission ${G.level} · ${G.mis.name} · ${D().name}</div><h3>Sound</h3>${optsHtml()}<h3>Controls</h3>${CONTROLS}<h3>Staying hidden</h3>${STEALTH}<button class="go" data-go="resume">Resume</button>`); }
+function pauseCard(){ showOverlay(`<h2>Paused</h2><div class="eyebrow">Mission ${G.level} · ${G.mis.name} · ${D().name} · ${VERSION}</div><h3>Sound</h3>${optsHtml()}<h3>Controls</h3>${CONTROLS}<h3>Staying hidden</h3>${STEALTH}<button class="go" data-go="resume">Resume</button>`); }
 function pause(){
   if(G.state!=='play') return;
   G.prevState=G.state; G.state='paused';
@@ -1819,6 +1821,7 @@ function frame(now){
 // boot: a quiet scene behind the title card
 G.sub={x:0,y:0,h:0,spd:0,set:0,depth:SCOPE_DEPTH,dTarget:SCOPE_DEPTH,scopeWant:true,scope:1,upT:0,hull:100};
 resupply(); setupMission(1); G.sub.set=0; G.sub.spd=0;
+$('ver').textContent=VERSION;
 resize(); titleScreen();
 requestAnimationFrame(frame);
 </script>
