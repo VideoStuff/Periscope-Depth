@@ -1,42 +1,42 @@
-# 🧦 Sock Quest: Laundromat of Doom
+# Periscope Depth
 
-A turn-based roguelike. You're a lone sock lost in a haunted laundromat. Descend six floors of procedurally generated dungeon, fight dust bunnies, rogue quarters and angry irons, and defeat **The Great Dryer** to find your matching pair. Permadeath.
+A WW2 submarine stealth game, played through the periscope. North Atlantic, 1942: you command an Allied submarine on a campaign against the German surface fleet. Hunt warships, raid harbours and rescue downed airmen without being found.
 
 ## Play
-Open `index.html` in any browser (desktop or mobile — touch d-pad included).
+Open `index.html` in any browser, on a computer or a phone (on-screen buttons included). Everything is in that one file.
 
-| Key | Action |
+## Campaign
+Seven hand-built missions, then endless generated ones:
+
+| Mission type | Goal |
 |---|---|
-| Arrows / WASD / hjkl / yubn | Move / attack (bump) |
-| `.` or Space | Wait |
-| `Q` | Fabric Softener (+10 HP) |
-| `E` | Bleach (damages foes within 3 tiles) |
-| `R` | Restart after death |
+| Convoy attack | Sink the cruisers and tankers before they steam out of range |
+| Capital ship | Sink a battleship that takes five hits, behind a strong destroyer screen |
+| Harbour raid | Get through a minefield and sink ships at anchor in a bay |
+| Rescue | Reach a life raft and pick up four airmen before German patrol boats do |
 
-Step on 🕳️ to go down the drain. 🧦 pickups grant max HP and attack; 📄 dryer sheets absorb damage.
+Each mission has day or night and its own weather (clear, fog, rain or heavy seas).
 
----
-
-# 🔭 Periscope Depth
-
-A WW2 submarine stealth game, played through the periscope. North Atlantic, 1942: you command an Allied submarine and must sink German warships (cruisers, a fleet tanker) before their escorts (destroyers, torpedo boats, patrol boats) find you.
-
-## Play
-Open `periscope/index.html` in any browser (desktop or phone; on-screen buttons included).
-
-## How it works
-- **Find them**: the plotting table (bottom right) shows ships you can *hear* as orange bearing lines, and ships you've *seen* as markers.
-- **Plot a solution**: keep a ship in the periscope view and the crew works out a firing solution. A **◆ AIM** marker appears ahead of the ship.
-- **Fire**: torpedoes run straight along the periscope bearing. Put the crosshair on ◆ AIM and fire. Cruisers take 2–3 hits.
+## How to attack
+- **Find them.** Marks around the periscope rim and orange lines on the plotting table point to ships you can *hear*.
+- **Plot a solution.** Keep a ship in view and the crew works out a firing solution. A **◆ AIM** marker appears ahead of it (on Veteran the crew calls out the lead angle instead).
+- **Fire.** Torpedoes run straight along the periscope bearing. Cruisers take 2–3 hits, a battleship 5.
 
 ## Stealth
 The **Detection** meter shows how close the enemy is to finding you.
-- A raised periscope is spotted faster the longer it stays up and the closer the enemy is.
+- A raised periscope is spotted faster the longer it stays up, the closer the enemy is, and the faster you move.
 - Speed makes noise; Ahead Slow is nearly silent.
 - Firing is loud, and lookouts may spot the torpedo wake and dodge.
-- Once detected, escorts charge in, ping with sonar, drop depth charges and shell your periscope.
-- To escape: lower the periscope, slow down and dive to 70 m, then move away from where you fired.
-- Finish a patrol without ever being detected for a **+50% ghost bonus**.
+- Destroyers hunt in pairs: one stops its engines to listen and guides the other onto you.
+- At night, hunting escorts fire star shells that light you up.
+- To escape: lower the periscope, slow down, dive to 70 m and move away from where you fired.
+- Finish a mission without ever being detected for a **+50% ghost bonus**.
+
+## Between missions
+Earn command points and spend them on refits: silent motors, a slim periscope, faster torpedo loading, extra torpedoes and a reinforced hull. Your career saves automatically in the browser, so you can close the game and continue later.
+
+## Settings
+Three difficulties (Easy, Normal, Veteran), background music and spoken crew callouts. Turn music and voices on or off from the pause menu.
 
 | Key | Action |
 |---|---|
@@ -49,4 +49,4 @@ The **Detection** meter shows how close the enemy is to finding you.
 | C | Dive deep / return to periscope depth |
 | T | Time compression (1× 2× 4× 8×) |
 | M | Enlarge plotting table |
-| P / Esc | Pause |
+| P / Esc | Pause and settings |
