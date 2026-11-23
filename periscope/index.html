@@ -113,7 +113,11 @@
     .panel{width:clamp(132px,41%,190px);font-size:12px;padding:7px 9px}
     .row b{font-size:12px} #detState{font-size:15px} .opt{display:none}
     #mapWrap{width:clamp(110px,34%,170px)} #mapWrap.big{width:min(92%,420px)}
-    #compass{width:50px;height:50px} #hdgBig{font-size:19px} #compassRow{gap:7px;margin:4px 0 0}
+    #compass{width:38px;height:38px} #hdgBig{font-size:16px} #compassRow{gap:6px;margin:3px 0 0}
+    #pBoat{width:clamp(120px,36%,160px);padding:6px 8px}
+    #pBoat .lbl,#pBoat .hlbl{display:none}
+    #pBoat .row{margin-top:2px} #rudderTxt{font-size:10px} #hullbar{height:5px;margin-top:3px}
+    #pBoat .row.hullrow{display:none}
     .cb{min-width:48px;padding:7px 8px;font-size:13px} .cb kbd{display:none} .cb.fire{min-width:76px;font-size:17px}
     #toasts{width:80%;top:auto;bottom:40%}
     .cols{grid-template-columns:1fr}
@@ -170,7 +174,7 @@
           <div id="rudderTxt">Steady</div>
         </div>
       </div>
-      <div class="row">Hull <b id="hullTxt" class="num">100%</b></div>
+      <div class="row hullrow">Hull <b id="hullTxt" class="num">100%</b></div>
       <div id="hullbar"><div id="hullfill"></div></div>
     </section>
 
@@ -451,7 +455,7 @@ function fire(){
   S.launch();
   // launch transient carries
   for(const e of G.ships){ if(e.sunk||e.sinking||e.escaped) continue;
-    const d=dist(s.x,s.y,e.x,e.y); if(d<2600){ e.alert=Math.min(100,e.alert+26*(1-d/2600)); setLK(e,s.x,s.y,320); } }
+    const d=dist(s.x,s.y,e.x,e.y); if(d<2600){ e.alert=Math.min(100,e.alert+20*(1-d/2600)); setLK(e,s.x,s.y,320); } }
   const n=G.tubes.indexOf(tube)+1;
   toast(`Torpedo away · tube ${n} · bearing ${pad3(h)}°`);
 }
@@ -519,16 +523,16 @@ function updDetect(e,dt){
   const s=G.sub, d=dist(s.x,s.y,e.x,e.y);
   let gain=0, err=d*.22;
   if(scopeExposed()){
-    const vr=(G.night?1000:2400)*e.T.look*(1+s.spd/MAXSPD*.7);
+    const vr=(G.night?900:2000)*e.T.look*(1+s.spd/MAXSPD*.45);
     if(d<vr){
       const k=Math.pow(1-d/vr,1.4);
-      gain += 26*k*(1+s.spd/MAXSPD*1.6)*(1+Math.min(s.upT/7,2.2))*(e.alert>=SUS?1.4:1);
+      gain += 18*k*(1+s.spd/MAXSPD*1.1)*(1+Math.min(s.upT/10,1.8))*(e.alert>=SUS?1.4:1);
       err=Math.min(err,d*.12);
     }
   }
   const n=noiseLevel(), hr=2300*(e.T.sonar?1:.75)*(e.v>11?.55:1);
-  if(n>0 && d<hr) gain += 16*n*(1-d/hr);
-  const decay = e.alert>=HUNT?1.5:3;
+  if(n>0 && d<hr) gain += 12*n*(1-d/hr);
+  const decay = e.alert>=HUNT?1.8:4;
   e.alert = clamp(e.alert + (gain-decay)*dt, 0, 100);
   if(gain>.5) setLK(e,s.x,s.y,e.alert>=DET?40:err*(1-e.alert/150));
   if(e.alert>=DET){ if(!G.stats.detected){ G.stats.detected=true; S.sting(); toast('DETECTED — they know where you are. Go deep!','bad'); }
@@ -1055,7 +1059,7 @@ function drawMap(){
   // enemy lookout range while the scope is up
   if(scopeExposed()){
     c.setLineDash([3,4]); c.strokeStyle='rgba(227,166,60,.35)';
-    c.beginPath(); c.arc(C,C,(G.night?1000:2400)*k,0,TAU); c.stroke(); c.setLineDash([]);
+    c.beginPath(); c.arc(C,C,(G.night?900:2000)*k,0,TAU); c.stroke(); c.setLineDash([]);
   }
   // periscope bearing
   const pb=G.scopeBrg*D2R;
@@ -1131,7 +1135,7 @@ function updHud(){
   else { st.textContent='No target'; st.className=''; }
   // boat
   $('depthTxt').textContent=`${Math.round(s.depth)} m`+(Math.abs(s.depth-s.dTarget)>1?(s.dTarget>s.depth?' ↓':' ↑'):'');
-  $('speedTxt').textContent=`${SPEED_NAMES[s.set]} · ${Math.round(s.spd*KN)} kn`;
+  $('speedTxt').textContent=`${innerWidth<=760?['Stop','Slow','Half','Full'][s.set]:SPEED_NAMES[s.set]} · ${Math.round(s.spd*KN)} kn`;
   $('hullTxt').textContent=Math.round(s.hull)+'%';
   const hf=$('hullfill'); hf.style.width=s.hull+'%'; hf.style.background=s.hull>60?'var(--safe)':s.hull>30?'var(--warn)':'var(--danger)';
   $('bScope').firstChild.textContent = s.scopeWant?'Lower':'Raise';
@@ -1216,7 +1220,7 @@ function brief(){
       <span>Torpedoes</span><span class="t">${G.tubes.filter(t=>t.ready).length} loaded + ${G.reserve} reserve</span>
       <span>Hull</span><span class="t">${Math.round(s.hull)}%</span>
     </div>
-    <p>${L.night?'A dark night. Their lookouts will not see your periscope beyond about 1 km, but you will struggle to see them past 3 km.':'Clear daylight. Lookouts can spot a raised periscope out to about 2.4 km. Keep your looks short.'}</p>
+    <p>${L.night?'A dark night. Their lookouts will not see your periscope beyond about 900 m, but you will struggle to see them past 3 km.':'Clear daylight. Lookouts can spot a raised periscope out to about 2 km. Keep your looks short.'}</p>
     <button class="go" data-go="launch">Up periscope</button>`);
 }
 function debrief(){
