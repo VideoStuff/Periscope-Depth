@@ -7,8 +7,11 @@ A WW2 submarine stealth game, played through the periscope. North Atlantic, 1942
 ## Play
 Open `index.html` in any browser, on a computer or a phone (on-screen buttons included). Everything is in that one file.
 
+## New here?
+Pick **Training** on the title screen: a short guided attack that teaches aiming, firing, diving, the hydrophones and surfacing.
+
 ## Campaign
-Seven hand-built missions, then endless generated ones:
+Nine hand-built missions, then endless generated ones, tracked on a map of the North Atlantic:
 
 | Mission type | Goal |
 |---|---|
@@ -16,6 +19,9 @@ Seven hand-built missions, then endless generated ones:
 | Capital ship | Sink a battleship that takes five hits, behind a strong destroyer screen |
 | Harbour raid | Get through a minefield and sink ships at anchor in a bay |
 | Rescue | Reach a life raft and pick up four airmen before German patrol boats do |
+| Submarine duel | Hunt a U-boat that is hunting you, and dodge its torpedoes |
+
+Some convoys sail near **neutral merchant ships** flying their colours. Identify every target first: sinking a neutral costs command points.
 
 Each mission has day or night and its own weather (clear, fog, rain or heavy seas).
 
@@ -23,6 +29,9 @@ Each mission has day or night and its own weather (clear, fog, rain or heavy sea
 - **Find them.** Marks around the periscope rim and orange lines on the plotting table point to ships you can *hear*.
 - **Plot a solution.** Keep a ship in view and the crew works out a firing solution. A **◆ AIM** marker appears ahead of it (on Veteran the crew calls out the lead angle instead).
 - **Fire.** Torpedoes run straight along the periscope bearing. Cruisers take 2–3 hits, a battleship 5.
+- **Choose the torpedo.** Steam torpedoes are fast with a long range but leave a bubble trail. Electric ones leave almost no wake but are slower and shorter-ranged.
+- **Listen.** The hydrophone station (H) shows a sound trace around a dial and identifies what you hear.
+- **Surface.** On the surface the diesels recharge your battery and air, and the deck gun (G) can finish off ships. You are loud and easy to see, so do it at night.
 
 ## Stealth
 The **Detection** meter shows how close the enemy is to finding you.
@@ -31,11 +40,14 @@ The **Detection** meter shows how close the enemy is to finding you.
 - Firing is loud, and lookouts may spot the torpedo wake and dodge.
 - Destroyers hunt in pairs: one stops its engines to listen and guides the other onto you.
 - At night, hunting escorts fire star shells that light you up.
+- By day, patrol aircraft hunt for periscopes and surfaced boats, bomb them and call in the escorts.
+- Battery and air run down underwater, faster at high speed.
+- Depth charges can crack the periscope, damage the motors or start flooding. Your damage-control party repairs them over time.
 - To escape: lower the periscope, slow down, dive to 70 m and move away from where you fired.
 - Finish a mission without ever being detected for a **+50% ghost bonus**.
 
 ## Between missions
-Earn command points and spend them on refits: silent motors, a slim periscope, faster torpedo loading, extra torpedoes and a reinforced hull. Your career saves automatically in the browser, so you can close the game and continue later.
+Earn command points and spend them on refits: silent motors, a slim periscope, faster torpedo loading, extra torpedoes, a reinforced hull and better batteries. Earn nine decorations and promotion from Lieutenant to Commodore; the service record shows your medals, mission log and campaign map. Your career saves automatically in the browser, so you can close the game and continue later.
 
 ## Settings
 Three difficulties (Easy, Normal, Veteran), background music and spoken crew callouts. Turn music and voices on or off from the pause menu.
@@ -49,6 +61,10 @@ Three difficulties (Easy, Normal, Veteran), background music and spoken crew cal
 | A / D | Steer the boat |
 | W / S | Speed up / slow down |
 | C | Dive deep / return to periscope depth |
+| V | Surface / dive |
+| G | Deck gun (when surfaced) |
+| X | Switch steam / electric torpedoes |
+| H | Hydrophone station |
 | T | Time compression (1× 2× 4× 8×) |
 | M | Enlarge plotting table |
 | P / Esc | Pause and settings |
