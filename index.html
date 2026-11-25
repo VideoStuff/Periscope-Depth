@@ -130,6 +130,7 @@
   .opts{display:flex;flex-wrap:wrap;gap:8px}
   .opt-btn{font-family:var(--mono);font-size:13px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--steel-2);color:var(--paper);cursor:pointer}
   .opt-btn.on{border-color:var(--brass);color:#f1d79a}
+  .vnote{font-size:14px!important;color:var(--muted);margin-top:6px!important}
 
   [hidden]{display:none!important}
   .cb.dim{opacity:.45}
@@ -395,7 +396,7 @@ const G = {
   sunBrg:0, clouds:[], stars:[], gunWarned:0, wind:{x:3,y:0},
   diff:'normal', up:{motors:0,scope:0,reload:0,torps:0,hull:0,battery:0}, opt:{music:true,voice:true},
   mis:null, land:null, raft:null, cine:null,
-  sys:{scope:0,motors:0,flood:0}, planes:[], shells:[], ttype:'steam', hydro:false, gunAmmo:GUN_AMMO, gunCd:0, planeT:999,
+  sys:{scope:0,motors:0,flood:0}, planes:[], shells:[], eshells:[], ttype:'steam', hydro:false, gunAmmo:GUN_AMMO, gunCd:0, planeT:999,
   career:{log:[],medals:[],ghosts:0}, tut:-1,
 };
 const D = () => DIFFS[G.diff];
@@ -434,7 +435,7 @@ function setupMission(n,spec){
   G.t=0; G.ts=1; G.ships=[]; G.torps=[]; G.charges=[]; G.fx=[]; G.booms=[]; G.flares=[]; G.mines=[]; G.lock=null; G.endT=-1;
   G.land=null; G.raft=null; G.cine=null; $('cine').hidden=true; toastsEl.innerHTML=''; VO.last={};
   G.stats = {fired:0,hits:0,detected:false,sunk:[],escaped:0,tons:0,rescued:false,captured:false,neutral:0,gunKills:0,uboat:0,battleship:0};
-  G.sys={scope:0,motors:0,flood:0}; G.gunAmmo=GUN_AMMO; G.gunCd=0; G.shells=[]; G.planes=[]; G.hydro=false; G.ttype='steam'; G.planeT=rnd(50,110); G.zoom=false;
+  G.sys={scope:0,motors:0,flood:0}; G.gunAmmo=GUN_AMMO; G.gunCd=0; G.shells=[]; G.eshells=[]; G.planes=[]; G.hydro=false; G.ttype='steam'; G.planeT=rnd(50,110); G.zoom=false;
   const s=G.sub; s.x=0; s.y=0; s.depth=SCOPE_DEPTH; s.dTarget=SCOPE_DEPTH; s.scopeWant=true; s.scope=1; s.upT=0; s.set=1; s.spd=3; s.batt=100; s.air=100;
   const ang = rnd(0,360), ux=Math.sin(ang*D2R), uy=Math.cos(ang*D2R);
   const wa=rnd(0,TAU), ws=G.wx===WEATHER.rough?7:rnd(2,5); G.wind={x:Math.sin(wa)*ws,y:Math.cos(wa)*ws};
@@ -549,10 +550,10 @@ const S = {
     g.gain.setValueAtTime(.0001,t+.4); g.gain.exponentialRampToValueAtTime(.09,t+.9); g.gain.exponentialRampToValueAtTime(.0001,t+5);
     o.connect(g).connect(uw); o.start(t+.4); o.stop(t+5.1);
   },
-  thit(v,near){ if(!AU.ctx) return; const t=AU.ctx.currentTime, uw=AU.uw, cut=lerp(110,360,near);
-    tone('sine',52,t,2.8,.95*v,22,uw); noise(t,4,.85*v,'lowpass',cut,35,uw);
-    tone('sine',40,t+.4,1.8,.45*v,18,uw); noise(t+.38,2.4,.35*v,'lowpass',cut*.7,30,uw);
-    for(let i=0;i<4;i++) tone('sawtooth',rnd(40,75),t+rnd(1.2,3.2),rnd(.6,1.4),.05*v,rnd(28,40),uw);
+  thit(v,near,sz=1,dl=0){ if(!AU.ctx) return; const t=AU.ctx.currentTime+dl, uw=AU.uw, cut=lerp(110,360,near), L=.8+.25*sz;
+    tone('sine',52/Math.sqrt(Math.max(.5,sz)),t,2.8*L,.95*v,22,uw); noise(t,4*L,.85*v,'lowpass',cut,35,uw);
+    tone('sine',40,t+.4,1.8*L,.45*v,18,uw); noise(t+.38,2.4*L,.35*v,'lowpass',cut*.7,30,uw);
+    for(let i=0;i<4+Math.round(sz);i++) tone('sawtooth',rnd(40,75),t+rnd(1.2,3.2),rnd(.6,1.4),.05*v,rnd(28,40),uw);
   },
   dc(v,close){ if(!AU.ctx) return; const t=AU.ctx.currentTime, uw=AU.uw, cut=lerp(140,420,close);
     tone('sine',48,t,2.4,.9*v,20,uw); noise(t,3.4,.8*v,'lowpass',cut,40,uw);
@@ -563,7 +564,35 @@ const S = {
     }
   },
   flare(v){ if(!AU.ctx) return; const t=AU.ctx.currentTime; noise(t,.5,.25*v,'lowpass',500,120,AU.uw); tone('sine',90,t,.3,.2*v,50,AU.uw); },
-  gun(v){ if(!AU.ctx) return; const t=AU.ctx.currentTime; noise(t,.9,.7*v,'lowpass',1400,200); tone('sine',70,t,.5,.6*v,35); },
+  // our own deck gun, fired from the open bridge: a sharp crack, a heavy boom and the echo rolling back off the sea
+  gun(v){ if(!AU.ctx) return; const t=AU.ctx.currentTime;
+    noise(t,.09,.9*v,'highpass',1800); noise(t,1.5,.8*v,'lowpass',1100,110); tone('sine',68,t,.7,.75*v,30); tone('triangle',140,t,.18,.3*v,60);
+    noise(t+.38,1.6,.18*v,'lowpass',420,90); noise(t+.9,1.8,.08*v,'lowpass',300,70); },
+  // an enemy shell: whistle (only audible in the open air), the splash, and the far gun's report arriving later
+  shell(tf,dGun,dImp,hit,air){ if(!AU.ctx) return; const t=AU.ctx.currentTime, out=air?AU.master:AU.uw;
+    const vi=clamp(260/(dImp+60),.12,1);
+    if(air && tf>.4){ const ws=t+Math.max(0,tf-1.1), wd=Math.min(1.1,tf);
+      noise(ws,wd,.16*vi,'bandpass',2600,650); tone('sine',1900,ws,wd,.035*vi,520); }
+    if(hit){ noise(t+tf,1.2,1*vi,'lowpass',air?2200:500,90,out); tone('sine',70,t+tf,.9,.9*vi,28,out); for(let i=0;i<5;i++) noise(t+tf+rnd(.05,.5),.12,.3*vi,'bandpass',rnd(500,1400),0,out); }
+    else { noise(t+tf,1.1,.85*vi,air?'lowpass':'lowpass',air?1700:420,140,out); noise(t+tf+.12,1.6,.35*vi,'highpass',air?900:200,0,out); tone('sine',85,t+tf,.35,.5*vi,40,out); }
+    const vg=clamp(900/(dGun+300),.06,.6), dl=Math.min(10,dGun/343);
+    noise(t+dl,1.8,.6*vg,'lowpass',air?380:180,60,out); tone('sine',52,t+dl,1.2,.5*vg,26,out); },
+  // explosions aboard a ship: size 0.3 (small boat) to 3+ (battleship), with a travel delay
+  blast(v,sz,dl,air,mag){ if(!AU.ctx) return; const t=AU.ctx.currentTime+dl, out=air?AU.master:AU.uw, k=clamp((sz-.3)/2.7,0,1);
+    const len=1.6+sz*.9+(mag?2.5:0), cut=air?lerp(900,380,k):lerp(420,150,k);
+    noise(t,len,Math.min(1,(.6+.12*sz)*v)*(mag?1.15:1),'lowpass',cut,40,out);
+    tone('sine',lerp(64,36,k)*(mag?.8:1),t,1+sz*.7+(mag?1.5:0),Math.min(1,.65*v*(mag?1.3:1)),20,out);
+    tone('sine',lerp(46,28,k),t+.3,1.4+sz*.6,.4*v,16,out);
+    for(let i=0;i<3+Math.round(sz*2)+(mag?6:0);i++) noise(t+rnd(.05,.9+sz*.3),rnd(.1,.3),.22*v,'bandpass',rnd(250,air?1400:500),0,out);
+    if(mag){ tone('sine',30,t+.8,3.5,.6*v,15,out); noise(t+.9,4,.5*v,'lowpass',cut*.6,30,out); } },
+  // the hull tearing and settling as she goes
+  groan(v,dl,sz){ if(!AU.ctx) return; const t=AU.ctx.currentTime+dl;
+    for(let i=0;i<3+Math.round(sz);i++) tone('sawtooth',rnd(32,55)/Math.sqrt(Math.max(.5,sz)),t+rnd(0,3.5),rnd(1,2.4),.06*v,rnd(22,32),AU.uw);
+    for(let i=0;i<4;i++) tone('triangle',rnd(90,180),t+rnd(.5,4),rnd(.2,.5),.05*v,rnd(60,90),AU.uw); },
+  // boilers meeting the sea: a roar of steam, then bubbles as she slips under
+  steam(v,dl,air){ if(!AU.ctx) return; const t=AU.ctx.currentTime+dl;
+    if(air) noise(t,3.5,.28*v,'highpass',1600,700); else noise(t,3,.35*v,'bandpass',600,250,AU.uw);
+    for(let i=0;i<14;i++) tone('sine',rnd(140,320),t+1+rnd(0,4),rnd(.06,.15),rnd(.06,.14)*v,rnd(70,120),AU.uw); },
   whine(v){ if(!AU.ctx) return; const t=AU.ctx.currentTime; tone('sawtooth',880,t,1.8,.05*v,1050,AU.uw); tone('sine',1760,t,1.8,.035*v,2100); },
   klaxon(){ if(!AU.ctx) return; const t=AU.ctx.currentTime; for(let i=0;i<3;i++) tone('square',420,t+i*.45,.3,.05); },
   clang(){ if(!AU.ctx) return; const t=AU.ctx.currentTime; tone('triangle',640,t,.7,.3); tone('triangle',953,t,.5,.18); },
@@ -606,12 +635,37 @@ function auUpdate(){
 }
 
 /* ================= crew voices ================= */
-const VO = {last:{}, ok:typeof speechSynthesis!=='undefined', voice:null};
-function pickVoice(){
-  if(!VO.ok) return null; if(VO.voice) return VO.voice;
-  const vs=speechSynthesis.getVoices(); if(!vs.length) return null;
-  VO.voice = vs.find(v=>/en-GB/i.test(v.lang)&&/male|daniel|george|arthur/i.test(v.name)) || vs.find(v=>/en-GB/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || null;
-  return VO.voice;
+const VO = {last:{}, ok:typeof speechSynthesis!=='undefined', cache:null};
+// Voices come from the device. Rank them: known male names first, natural/neural voices above the old robotic ones.
+const V_MALE=/(\bmale\b|\bguy\b|ryan|christopher|\beric\b|roger|steffan|andrew|brian|davis|jason|\btony\b|thomas|george|david|\bmark\b|james|\bliam\b|william|connor|mitchell|daniel|arthur|oliver|aaron|\balex\b|\btom\b|gordon|\blee\b|rishi|evan|nathan|alfie|elliot|ethan|\bnoah\b|oscar|harry|\bjack\b|kenneth|richard|brandon|christian|duncan|malcolm|neil|ken\b|tim\b|stephen|matthew|joey|justin|russell|guy)/i;
+const V_FEMALE=/(female|samantha|karen|moira|tessa|victoria|fiona|serena|\bkate\b|martha|susan|hazel|zira|\baria\b|jenny|sonia|libby|natasha|clara|emma|\bava\b|allison|\bana\b|michelle|\bsara|nancy|amber|ashley|\bcora\b|elizabeth|\bjane\b|monica|maisie|\bmia\b|abbie|bella|hollie|olivia|catherine|joanna|kendra|kimberly|salli|\bivy\b|\bruth\b|\bamy\b|nicole|emily|vicki|tina|lisa|linda|heera|veena|\bisha\b|neerja|kalpana|hedda|helena|helen|laura|\bzoe\b|\banna\b|\bmolly|sienna|\bjoanna|\bleah|\bella|\bnatalie|\bfreya|\bsally|\bmaria|\bnora|\beva\b|\bsiri\b)/i;
+const V_NOVELTY=/(\bfred\b|albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|grandpa|grandma|junior|ralph|rocko|\beddy\b|\bflo\b|\breed\b|sandy|shelley|espeak)/i;
+function voiceScore(v){
+  if(!/^en/i.test(v.lang)) return -1;
+  const n=v.name; if(V_FEMALE.test(n)||V_NOVELTY.test(n)) return -1;
+  let sc=V_MALE.test(n)?100:20;
+  if(/natural|neural|online|premium|enhanced|wavenet|studio/i.test(n)) sc+=60;
+  if(/en-GB/i.test(v.lang)) sc+=25; else if(/en-(AU|IE|NZ)/i.test(v.lang)) sc+=10;
+  if(/google/i.test(n)) sc+=15; if(v.localService===false) sc+=10;
+  return sc;
+}
+function crewVoices(){   // best first; only voices we believe are male (score >= 100)
+  if(!VO.ok) return []; if(VO.cache) return VO.cache;
+  const vs=speechSynthesis.getVoices(); if(!vs.length) return [];
+  const ranked=vs.map(v=>[voiceScore(v),v]).filter(x=>x[0]>=0).sort((a,b)=>b[0]-a[0]);
+  const male=ranked.filter(x=>x[0]>=100).map(x=>x[1]);
+  VO.fallback=!male.length;   // nothing known-male on this device: use the best neutral voice, pitched down a little
+  VO.cache = male.length ? male : ranked.slice(0,1).map(x=>x[1]);
+  return VO.cache;
+}
+// three crewmen: the officer of the watch, the sonar operator and the lookout, each with his own voice where the device has several
+const ROLE_OF={ping:'sonar',etorp:'sonar',etorp2:'sonar',hydro:'sonar',listen:'sonar',mine:'sonar',plane:'look',flare:'look',det:'look',closing:'look',idn:'look'};
+function crewVoice(key){
+  const vs=crewVoices(); if(!vs.length) return {v:null,p:.9};
+  const role=ROLE_OF[key]||'officer', idx={officer:0,sonar:1,look:2}[role];
+  const chosen=G.opt.voiceName&&vs.find(v=>v.name===G.opt.voiceName);
+  const base=chosen? [chosen,...vs.filter(v=>v!==chosen)] : vs;
+  return {v:base[idx%base.length], p:(VO.fallback?.86:1)*[1,.96,1.04][idx]};
 }
 function say(key, text, gap=8, urgent=false, quiet=false){
   if(G.state!=='play' && G.state!=='sinking') return;
@@ -620,8 +674,8 @@ function say(key, text, gap=8, urgent=false, quiet=false){
   if(!quiet) toast('“'+text+'”','crew');
   if(!G.opt.voice||!VO.ok||!AU.on) return;
   try{
-    const u=new SpeechSynthesisUtterance(text); u.rate=1.08; u.pitch=.7; u.volume=.9;
-    const v=pickVoice(); if(v) u.voice=v;
+    const u=new SpeechSynthesisUtterance(text); const cv=crewVoice(key);
+    u.rate=urgent?1.08:1; u.pitch=cv.p; u.volume=1; if(cv.v){ u.voice=cv.v; u.lang=cv.v.lang; }
     if(urgent) speechSynthesis.cancel();
     if(speechSynthesis.speaking && !urgent && speechSynthesis.pending) return;
     speechSynthesis.speak(u);
@@ -734,6 +788,7 @@ function step(dt){
   for(const e of G.ships) updShip(e,dt);
   updTorps(dt);
   updShells(dt);
+  updEShells(dt);
   updCharges(dt);
   updFlares(dt);
   updPlanes(dt);
@@ -854,7 +909,15 @@ function updShip(e,dt){
   if(e.sunk||e.escaped) return;
   const s=G.sub, g=G.group;
   if(e.sinking>0){
-    e.sinking += dt/15; e.v=Math.max(0,e.v-dt*.7);
+    // she burns and blows apart as she goes: more, and bigger, explosions for bigger ships
+    const sz=shipSize(e);
+    if(e.boomT===undefined){ e.boomT=rnd(.8,2); e.magAt=sz>=1&&Math.random()<.45+.15*sz?rnd(.12,.35):-1; }
+    e.boomT-=dt;
+    if(e.boomT<=0 && e.sinking<.86){ e.boomT=rnd(1.3,3.6)/Math.sqrt(sz); secondaryBlast(e,sz*rnd(.45,.9),false); }
+    if(e.magAt>0 && e.sinking>=e.magAt){ e.magAt=-1; secondaryBlast(e,sz*1.6,true); }
+    if(!e.steamDone && e.sinking>.78){ e.steamDone=true; const d=dist(s.x,s.y,e.x,e.y), air=surfaced();
+      S.steam(clamp(1100/(d+400),.06,1)*Math.sqrt(sz), air?Math.min(10,d/343):Math.min(4,d/1500), air); }
+    e.sinking += dt/(15+sz*2); e.v=Math.max(0,e.v-dt*.7);
     e.x+=Math.sin(e.h*D2R)*e.v*dt; e.y+=Math.cos(e.h*D2R)*e.v*dt;
     e.smokeT-=dt; if(e.smokeT<=0 && e.sinking<.92){ e.smokeT=.09; burnFx(e); }
     emitShip(e,dt);
@@ -940,8 +1003,13 @@ function updShip(e,dt){
     if(e.gunT<=0){
       e.gunT=rnd(2.5,4.5);
       if(G.rt-G.gunWarned>8){ G.gunWarned=G.rt; toast(`${e.T.name} is shelling your periscope!`,'bad'); }
-      if(Math.random() < (sf ? .12+.3*(1-d/6000) : .08+.2*(1-d/3000))){ damage(sf?rnd(8,15):rnd(5,10), sf?'Shell hit on the hull!':'Shell hit near the periscope!'); column(s.x+rnd(-40,40),s.y+rnd(-40,40),.45,false); }
-      else { const a=(G.scopeBrg+rnd(-14,14))*D2R, r=rnd(90,320); column(s.x+Math.sin(a)*r, s.y+Math.cos(a)*r, .4,false); S.splash(.8); }
+      const hit=Math.random() < (sf ? .12+.3*(1-d/6000) : .08+.2*(1-d/3000));
+      const ta=rnd(0,TAU), r=hit?rnd(0,25):rnd(70,320), ix=s.x+Math.sin(ta)*r, iy=s.y+Math.cos(ta)*r;
+      const tf=d/620;   // shells outrun their own sound: you hear the splash before the gun
+      G.eshells.push({x:ix,y:iy,t:tf,hit,sf});
+      P({k:'flash',x:e.x,y:e.y,z:e.T.fb+3,r:e.T.B*.6,gr:15,max:.15,a:1});
+      P({k:'smoke',x:e.x,y:e.y,z:e.T.fb+3,vx:G.wind.x*.4,vy:G.wind.y*.4,vz:1,r:3,gr:4,max:5,a:.5});
+      S.shell(tf,d,r,hit,sf);
     }
   }
   // ramming
@@ -1001,6 +1069,16 @@ function updPlanes(dt){
   }
   G.planes=G.planes.filter(p=>p.life<240 && !(p.life>30 && dist(s.x,s.y,p.x,p.y)>8000));
 }
+function updEShells(dt){
+  const s=G.sub;
+  for(const sh of G.eshells){ sh.t-=dt; if(sh.t>0) continue; sh.done=true;
+    column(sh.x,sh.y,sh.hit?.55:.42,false);
+    if(sh.hit && G.state==='play'){ if(sh.sf){ damage(rnd(8,15),'Shell hit on the hull!'); for(let i=0;i<6;i++) P({k:'fire',x:s.x,y:s.y,z:rnd(1,4),vz:rnd(3,8),r:rnd(1,2),gr:3,max:.5,a:.9}); }
+      else damage(rnd(5,10),'Shell hit near the periscope!'); }
+    else if(dist(sh.x,sh.y,s.x,s.y)<120) G.shake=Math.max(G.shake,2.5);
+  }
+  G.eshells=G.eshells.filter(x=>!x.done);
+}
 function updShells(dt){
   for(const sh of G.shells){ sh.t-=dt; if(sh.t>0) continue; sh.done=true;
     const e=sh.e;
@@ -1012,6 +1090,7 @@ function updShells(dt){
       P({k:'smoke',x,y,z:e.T.fb+3,vx:G.wind.x*.5,vy:G.wind.y*.5,vz:5,r:4,gr:4,max:8,a:.7});
       if(e.role==='neutral') neutralHit(e);
       if(e.hp<=0) sinkShip(e,'gun'); else if(isVisible(e)) toast(`Shell hit on the ${e.idd?e.T.name.toLowerCase():'target'}`,'good');
+      const d=dist(G.sub.x,G.sub.y,e.x,e.y); S.blast(clamp(900/(d+300),.05,.7),.35,Math.min(10,d/343),true,false);
     } else column(sh.x,sh.y,.35,false);
   }
   G.shells=G.shells.filter(x=>!x.done);
@@ -1112,7 +1191,7 @@ function updTorps(dt){
 function hitShip(e,t){
   G.stats.hits++; e.hp--;
   const s=G.sub, d=dist(s.x,s.y,e.x,e.y);
-  S.thit(clamp(900/(d+300),.15,1), clamp(1-d/4000,0,1));
+  S.thit(clamp(900/(d+300),.15,1), clamp(1-d/4000,0,1), shipSize(e), Math.min(3,d/1500));
   if(d<6000) G.shake=Math.max(G.shake,clamp(3000/(d+200),0,3));
   explosion(t.x,t.y,e);
   for(const o of G.ships){ if(o.sunk||o.escaped||o.sinking) continue;
@@ -1128,6 +1207,20 @@ function hitShip(e,t){
   }
 }
 
+const shipSize = e => clamp(e.T.tons/6000,.3,3.2);
+// a secondary explosion aboard a burning or sinking ship: boilers, ready-use ammunition, or the magazine itself
+function secondaryBlast(e,sz,mag){
+  const s=G.sub, off=rnd(-.38,.38)*e.T.L, x=e.x+Math.sin(e.h*D2R)*off, y=e.y+Math.cos(e.h*D2R)*off;
+  const z=Math.max(1,e.T.fb*(1-e.sinking)+1.5);
+  P({k:'flash',x,y,z,r:e.T.B*(mag?2.2:.9)*Math.sqrt(sz),gr:mag?60:25,max:mag?.45:.25,a:1});
+  for(let i=0;i<Math.round(6+sz*5+(mag?20:0));i++) P({k:'fire',x:x+gauss()*3*sz,y:y+gauss()*3*sz,z:z+rnd(0,4),vx:gauss()*2*sz,vy:gauss()*2*sz,vz:rnd(5,mag?30:15),r:rnd(3,6)*Math.sqrt(sz),gr:6,max:rnd(.5,1.2),a:.95});
+  for(let i=0;i<Math.round(4+sz*3+(mag?14:0));i++) P({k:'smoke',x:x+gauss()*4,y:y+gauss()*4,z:z+rnd(2,8),vx:G.wind.x*.5,vy:G.wind.y*.5,vz:rnd(5,mag?16:9),r:rnd(5,9)*Math.sqrt(sz),gr:5,max:rnd(9,15),a:.8});
+  if(mag) column(x,y,clamp(e.T.L/110,1,2),true);
+  const d=dist(s.x,s.y,x,y), air=surfaced();
+  S.blast(clamp(1500/(d+400),.06,1), sz, air?Math.min(10,d/343):Math.min(4,d/1500), air, mag);
+  if(d<6000) G.shake=Math.max(G.shake,clamp((mag?2600:900)*sz/(d+300),0,mag?5:2));
+  if(mag && d<7000) say('mag',"She's blown up! Her magazine's gone!",15,true);
+}
 function neutralHit(e){ if(e.nWarned) return; e.nWarned=true; toast('That ship is flying neutral colours!','bad'); }
 function sinkShip(e,how){
   e.sinking=.001;
@@ -1140,6 +1233,7 @@ function sinkShip(e,how){
   }
   if(G.lock===e) G.lock=null;
   if(e.T.tons>=2000) startCine(e);
+  const d=dist(G.sub.x,G.sub.y,e.x,e.y); S.groan(clamp(1200/(d+400),.08,1), Math.min(4,d/1500)+1.5, shipSize(e));
 }
 /* ---- particles ---- kinds: water (white, falls), mist (white haze), fire, flash, smoke (dark), fsmoke (funnel) */
 function P(o){ G.fx.push(Object.assign({vx:0,vy:0,vz:0,r:2,gr:0,life:0,max:2,a:1,v:Math.random()*3|0,g:false},o)); }
@@ -1940,7 +2034,9 @@ function optsHtml(){
   return `<div class="opts">
     <button class="opt-btn ${G.opt.music?'on':''}" data-go="opt:music">Music: ${G.opt.music?'On':'Off'}</button>
     <button class="opt-btn ${G.opt.voice?'on':''}" data-go="opt:voice">Crew voices: ${G.opt.voice?'On':'Off'}</button>
-  </div>`;
+    ${VO.ok&&crewVoices().length?`<button class="opt-btn" data-go="voicepick">Voice: ${(G.opt.voiceName&&crewVoices().find(v=>v.name===G.opt.voiceName)?G.opt.voiceName:'Auto · '+crewVoices()[0].name).replace(/^Microsoft |Online \(Natural\) - |\s*\(.*\)$/g,'')}</button>`:''}
+  </div>
+  ${VO.ok?`<p class="vnote">${VO.fallback?'This device has no male English voice installed, so the crew uses the closest voice it has. ':''}Crew voices come from your device. The most natural ones are the “Natural” voices in Microsoft Edge and the Google voices in Chrome. Tap Voice to cycle through the male voices you have; you’ll hear a sample.</p>`:''}`;
 }
 const GO = {
   newgame(){ showOverlay(`<h2>Choose difficulty</h2><p>You can't change this later in the career.</p>
@@ -1957,6 +2053,10 @@ const GO = {
   next(){ G.level++; const s=G.sub; s.hull=Math.min(100,s.hull+40); resupply(); saveCareer(); brief(); },
   buy(id){ const lv=G.up[id]; if(lv>=3||G.merit<UP_COST[lv]) return; G.merit-=UP_COST[lv]; G.up[id]++; S.coin(); saveCareer(); renderDebrief(); },
   resume(){ hideOverlay(); G.state=G.prevState||'play'; G.last=performance.now(); },
+  voicepick(){ const vs=crewVoices(); if(!vs.length) return; const i=vs.findIndex(v=>v.name===G.opt.voiceName);
+    G.opt.voiceName = i+1<vs.length ? vs[i+1].name : ''; saveOpts();
+    try{ speechSynthesis.cancel(); const v=G.opt.voiceName?vs.find(x=>x.name===G.opt.voiceName):vs[0]; const u=new SpeechSynthesisUtterance('Aye aye, Captain. Periscope depth.'); u.voice=v; u.lang=v.lang; u.pitch=VO.fallback?.86:1; speechSynthesis.speak(u); }catch(e){}
+    if(G.state==='paused') pauseCard(); else titleScreen(); },
   opt(k){ G.opt[k]=!G.opt[k]; saveOpts(); if(k==='voice'&&!G.opt.voice&&VO.ok) speechSynthesis.cancel(); if(G.state==='paused') pauseCard(); else titleScreen(); },
   retry(){ GO.newgame(); },
 };
@@ -2199,7 +2299,7 @@ function toggleMap(){ G.mapBig=!G.mapBig; $('mapWrap').classList.toggle('big',G.
 $('mapWrap').addEventListener('click',toggleMap);
 $('bHelp').addEventListener('click',()=>{ if(G.state==='play') pause(); else if(G.state==='paused') GO.resume(); });
 $('bSound').addEventListener('click',()=>{ AU.on=!AU.on; auInit(); if(AU.master) AU.master.gain.value=AU.on?.8:0; if(!AU.on&&VO.ok) speechSynthesis.cancel(); $('bSound').textContent=AU.on?'SND':'MUTE'; });
-if(VO.ok && speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged',()=>{ VO.voice=null; pickVoice(); });
+if(VO.ok && speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged',()=>{ VO.cache=null; crewVoices(); if(G.state==='title') titleScreen(); });
 
 let drag=null;
 cv.addEventListener('pointerdown',e=>{ drag={x:e.clientX,type:e.pointerType}; try{cv.setPointerCapture(e.pointerId);}catch(_){} });
