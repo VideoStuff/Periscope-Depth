@@ -263,6 +263,7 @@
   </nav>
 </div>
 
+<script src="voice/voices.js"></script>
 <script>
 'use strict';
 /* ================= helpers ================= */
@@ -280,7 +281,7 @@ const fmt = n => Math.round(n).toLocaleString('en-US');
 const pad3 = n => String(Math.round(wrap360(n))%360).padStart(3,'0');
 function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/0.5; }
 const MONO = "'Share Tech Mono', ui-monospace, Menlo, monospace";
-const VERSION = 'v2.1';
+const VERSION = 'v2.2';
 
 /* ================= constants ================= */
 const SCOPE_DEPTH = 14, DEEP = 70, MAX_SCOPE_DEPTH = 17, MAX_FIRE_DEPTH = 22;
@@ -669,12 +670,68 @@ function crewVoice(key){
   const base=chosen? [chosen,...vs.filter(v=>v!==chosen)] : vs;
   return {v:base[idx%base.length], p:(VO.fallback?.86:1)*[1,.96,1.04][idx]};
 }
+/* ---- recorded crew lines: pre-generated clips (voice/voices.js) played over the boat's intercom ---- */
+const VC = {buf:{}, q:[], busy:false, cur:[], gen:0, bus:null, ready:false};
+const vnorm = t => t.toLowerCase().replace(/’/g,"'").replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+function clipKeys(role, text){
+  const C=window.VOICE_CLIPS; if(!C) return null;
+  const roles=[role,'officer','sonar','look'];
+  const find=t=>{ const n=vnorm(t); for(const r of roles) if(C[r+'|'+n]) return r+'|'+n; return null; };
+  const whole=find(text); if(whole) return [whole];
+  const out=[], parts=(text.match(/[^!.?]+[!.?]*/g)||[]).filter(x=>vnorm(x));
+  for(let i=0;i<parts.length;){
+    const m=vnorm(parts[i]).match(/^bearing (\d)(\d)(\d)$/);
+    if(m){ const r=C[role+'|bearing']?role:C['look|bearing']?'look':'sonar'; out.push(r+'|bearing',r+'|'+m[1],r+'|'+m[2],r+'|'+m[3]); i++; continue; }
+    let j=parts.length, k=null;             // longest run of sentences that has its own recording
+    for(;j>i;j--){ k=find(parts.slice(i,j).join(' ')); if(k) break; }
+    if(!k) return null; out.push(k); i=j;
+  }
+  return out.length?out:null;
+}
+function vcInit(){
+  if(VC.bus||!AU.ctx||!window.VOICE_CLIPS) return;
+  const a=AU.ctx; VC.bus=a.createGain(); VC.bus.gain.value=1.15;
+  const hp=a.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=260;
+  const lp=a.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3800;
+  const pk=a.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=1800; pk.Q.value=.8; pk.gain.value=4;
+  const sh=a.createWaveShaper(); const n=1024, cv=new Float32Array(n); for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; cv[i]=Math.tanh(1.6*x)/Math.tanh(1.6); } sh.curve=cv;
+  const cmp=a.createDynamicsCompressor(); cmp.threshold.value=-20; cmp.ratio.value=4;
+  VC.bus.connect(hp).connect(lp).connect(pk).connect(sh).connect(cmp).connect(AU.master);
+  // decode every clip once, in the background
+  (async()=>{ for(const k of Object.keys(window.VOICE_CLIPS)){ try{ await vcBuf(k); }catch(e){} } VC.ready=true; })();
+}
+async function vcBuf(k){
+  if(VC.buf[k]) return VC.buf[k];
+  const b64=window.VOICE_CLIPS[k]; if(!b64) return null;
+  const bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+  VC.buf[k]=await AU.ctx.decodeAudioData(u.buffer); return VC.buf[k];
+}
+function vcStop(){ VC.gen++; VC.q.length=0; for(const s of VC.cur){ try{ s.stop(); }catch(e){} } VC.cur=[]; VC.busy=false; }
+function vcPlay(keys, urgent){
+  if(urgent) vcStop(); else if(VC.busy && VC.q.length) return;   // don't let chatter pile up
+  VC.q.push(keys); if(!VC.busy) vcNext();
+}
+async function vcNext(){
+  const keys=VC.q.shift(); if(!keys){ VC.busy=false; return; }
+  VC.busy=true; const g=++VC.gen;
+  const bufs=[]; for(const k of keys){ try{ const b=await vcBuf(k); if(b) bufs.push([k,b]); }catch(e){} }
+  if(g!==VC.gen) return;
+  const a=AU.ctx; let t=a.currentTime+.06;
+  noise(t-.04,.05,.05,'bandpass',2500,0,VC.bus);              // intercom click
+  VC.cur=[];
+  for(const [k,b] of bufs){ const src=a.createBufferSource(); src.buffer=b; src.connect(VC.bus); src.start(t); VC.cur.push(src);
+    t+=b.duration+(/\|(\d|bearing)$/.test(k)?.03:.12); }
+  noise(t,.04,.035,'bandpass',2200,0,VC.bus);
+  setTimeout(()=>{ if(g===VC.gen) vcNext(); },(t-a.currentTime)*1000+180);
+}
 function say(key, text, gap=8, urgent=false, quiet=false){
   if(G.state!=='play' && G.state!=='sinking') return;
   if(VO.last[key]!==undefined && G.rt-VO.last[key]<gap) return;
   VO.last[key]=G.rt;
   if(!quiet) toast('“'+text+'”','crew');
-  if(!G.opt.voice||!VO.ok||!AU.on) return;
+  if(!G.opt.voice||!AU.on) return;
+  if(AU.ctx && window.VOICE_CLIPS){ vcInit(); const ks=clipKeys(ROLE_OF[key]||'officer',text); if(ks){ vcPlay(ks,urgent); return; } }
+  if(!VO.ok) return;
   try{
     const u=new SpeechSynthesisUtterance(text); const cv=crewVoice(key);
     u.rate=urgent?1.08:1; u.pitch=cv.p; u.volume=1; if(cv.v){ u.voice=cv.v; u.lang=cv.v.lang; }
@@ -1056,7 +1113,7 @@ function updUboat(e,dt){
       if(e.alert>=HUNT && off<20 && e.torpCd<=0){ e.torpCd=rnd(40,55);
         for(const sp of [0, rnd(1.2,2.2)*(Math.random()<.5?-1:1)]){ const h=wrap360(brgTo(e.x,e.y,e.lk.x,e.lk.y)+sp);
           G.torps.push({x:e.x+Math.sin(h*D2R)*40,y:e.y+Math.cos(h*D2R)*40,h,run:0,ox:e.x,oy:e.y,trail:[],alive:true,lastT:0,v:55,range:5000,type:'steam',enemy:true}); }
-        if(dist(e.x,e.y,s.x,s.y)<4500){ S.whine(1); say('etorp',`Torpedo in the water! High-speed screws, bearing ${pad3(brgTo(s.x,s.y,e.x,e.y))}!`,0,true); } } }
+        if(dist(e.x,e.y,s.x,s.y)<4500){ S.whine(1); say('etorp',`Torpedo in the water! High-speed screws! Bearing ${pad3(brgTo(s.x,s.y,e.x,e.y))}!`,0,true); } } }
   } else { const P=e.patrol; P.a+=P.dir*3/P.r*dt; tx=P.cx+Math.sin(P.a+.25)*P.r; ty=P.cy+Math.cos(P.a+.25)*P.r; tv=e.dep<1?6:3; }
   e.h=turnTo(e.h,brgTo(e.x,e.y,tx,ty),e.T.turn*dt);
   e.v+=clamp(tv-e.v,-.6*dt,.4*dt); e.x+=Math.sin(e.h*D2R)*e.v*dt; e.y+=Math.cos(e.h*D2R)*e.v*dt;
@@ -2051,9 +2108,15 @@ function optsHtml(){
   return `<div class="opts">
     <button class="opt-btn ${G.opt.music?'on':''}" data-go="opt:music">Music: ${G.opt.music?'On':'Off'}</button>
     <button class="opt-btn ${G.opt.voice?'on':''}" data-go="opt:voice">Crew voices: ${G.opt.voice?'On':'Off'}</button>
-    ${VO.ok&&crewVoices().length?`<button class="opt-btn" data-go="voicepick">Voice: ${(G.opt.voiceName&&crewVoices().find(v=>v.name===G.opt.voiceName)?G.opt.voiceName:'Auto · '+crewVoices()[0].name).replace(/^Microsoft |Online \(Natural\) - |\s*\(.*\)$/g,'')}</button>`:''}
+    ${window.VOICE_CLIPS?`<button class="opt-btn" data-go="voicetest">Test crew voices</button>`:''}
+    ${!window.VOICE_CLIPS&&VO.ok&&crewVoices().length?`<button class="opt-btn" data-go="voicepick">Voice: ${(G.opt.voiceName&&crewVoices().find(v=>v.name===G.opt.voiceName)?G.opt.voiceName:'Auto · '+crewVoices()[0].name).replace(/^Microsoft |Online \(Natural\) - |\s*\(.*\)$/g,'')}</button>`:''}
   </div>
-  ${VO.ok?`<p class="vnote">${VO.fallback?'This device has no male English voice installed, so the crew uses the closest voice it has. ':''}Crew voices come from your device. The most natural ones are the “Natural” voices in Microsoft Edge and the Google voices in Chrome. Tap Voice to cycle through the male voices you have; you’ll hear a sample.</p>`:''}`;
+  ${window.VOICE_CLIPS?'':VO.ok?`<p class="vnote">${VO.fallback?'This device has no male English voice installed, so the crew uses the closest voice it has. ':''}Crew voices come from your device. The most natural ones are the “Natural” voices in Microsoft Edge and the Google voices in Chrome. Tap Voice to cycle through the male voices you have; you’ll hear a sample.</p>`:''}`;
+}
+function voiceTest(){
+  if(!AU.ctx) return; vcInit(); let d=0;
+  for(const [r,t] of [['officer','Aye aye, Captain. Periscope depth.'],['sonar',"They're pinging us. They have a contact."],['look','Aircraft! Bearing 310! Take her down!']]){
+    const ks=clipKeys(r,t); if(ks) setTimeout(()=>vcPlay(ks,false),d); d+=3200; }
 }
 const GO = {
   newgame(){ showOverlay(`<h2>Choose difficulty</h2><p>You can't change this later in the career.</p>
@@ -2070,6 +2133,7 @@ const GO = {
   next(){ G.level++; const s=G.sub; s.hull=Math.min(100,s.hull+40); resupply(); saveCareer(); brief(); },
   buy(id){ const lv=G.up[id]; if(lv>=3||G.merit<UP_COST[lv]) return; G.merit-=UP_COST[lv]; G.up[id]++; S.coin(); saveCareer(); renderDebrief(); },
   resume(){ hideOverlay(); G.state=G.prevState||'play'; G.last=performance.now(); },
+  voicetest(){ voiceTest(); },
   voicepick(){ const vs=crewVoices(); if(!vs.length) return; const i=vs.findIndex(v=>v.name===G.opt.voiceName);
     G.opt.voiceName = i+1<vs.length ? vs[i+1].name : ''; saveOpts();
     try{ speechSynthesis.cancel(); const v=G.opt.voiceName?vs.find(x=>x.name===G.opt.voiceName):vs[0]; const u=new SpeechSynthesisUtterance('Aye aye, Captain. Periscope depth.'); u.voice=v; u.lang=v.lang; u.pitch=VO.fallback?.86:1; speechSynthesis.speak(u); }catch(e){}
@@ -2162,7 +2226,8 @@ function titleScreen(){
     </ul>
     <h3>How to stay hidden</h3>${STEALTH}
     <h3>Sound</h3>${optsHtml()}
-    <h3>Controls</h3>${CONTROLS}`);
+    <h3>Controls</h3>${CONTROLS}
+    <p class="vnote">Crew voices generated with Piper (MIT) using the VCTK corpus (CC BY 4.0, University of Edinburgh) and OpenSLR 83 (CC BY-SA 4.0).</p>`);
 }
 const BRIEF = {
   convoy: b=>`Intelligence reports a German force bearing about <b class="num">${b}°</b>, roughly 3.5 km out, steaming across your position. Sink the targets before they pass.`,
@@ -2268,7 +2333,7 @@ function pauseCard(){ showOverlay(`<h2>Paused</h2><div class="eyebrow">${rankOf(
 function pause(){
   if(G.state!=='play') return;
   G.prevState=G.state; G.state='paused';
-  if(VO.ok) speechSynthesis.cancel();
+  if(VO.ok) speechSynthesis.cancel(); vcStop();
   pauseCard();
 }
 

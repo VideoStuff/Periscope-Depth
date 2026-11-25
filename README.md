@@ -1,11 +1,11 @@
 # Periscope Depth
 
-Version 2.1 (shown as **v2.1** next to the title in the game). See the version history at the bottom.
+Version 2.2 (shown as **v2.2** next to the title in the game). See the version history at the bottom.
 
 A WW2 submarine stealth game, played through the periscope. North Atlantic, 1942: you command an Allied submarine on a campaign against the German surface fleet. Hunt warships, raid harbours and rescue downed airmen without being found.
 
 ## Play
-Open `index.html` in any browser, on a computer or a phone (on-screen buttons included). Everything is in that one file.
+Open `index.html` in any browser, on a computer or a phone (on-screen buttons included). The game is that one file; the crew's recorded voice lines live in `voice/voices.js` next to it.
 
 ## New here?
 Pick **Training** on the title screen: a short guided attack that teaches aiming, firing, diving, the hydrophones and surfacing.
@@ -69,7 +69,17 @@ Three difficulties (Easy, Normal, Veteran), background music and spoken crew cal
 | M | Enlarge plotting table |
 | P / Esc | Pause and settings |
 
+## Crew voices
+The crew's lines are pre-recorded audio clips made with [Piper](https://github.com/rhasspy/piper), an open-source neural voice engine (MIT licence), so they sound the same on every device. They play through a ship's-intercom filter. Bearings are read digit by digit.
+
+| Crewman | Voice | Source and licence |
+|---|---|---|
+| Officer of the watch | VCTK speaker p226 | [VCTK corpus](https://datashare.ed.ac.uk/handle/10283/3443), CSTR, University of Edinburgh, CC BY 4.0 |
+| Sonar operator | Northern English male | [OpenSLR 83](http://www.openslr.org/83/), CC BY-SA 4.0 |
+| Lookout | VCTK speaker p279 | VCTK corpus, CC BY 4.0 |
+
 ## Version history
+- **2.2** — Recorded crew voices: every line is a pre-generated audio clip played over the intercom, with three distinct crewmen. "Test crew voices" button in the sound settings.
 - **2.1** — More natural male crew voices with a voice picker; realistic shellfire (whistle, splash, delayed gun report); explosions as ships sink, bigger for bigger ships; on phones, pop-up messages show one at a time in a small strip at the top.
 - **2** — Torpedo types, battery and air, aircraft, hydrophone station, deck gun, U-boat duel, system damage, neutral ships, training mission, campaign map, medals and ranks.
 - **1** — Campaign, refits, weather, smarter destroyers, music and crew callouts, realistic effects, sinking close-up.
