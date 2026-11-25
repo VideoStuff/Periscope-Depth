@@ -1,6 +1,6 @@
 # Periscope Depth
 
-Version 2 (shown as **v2** next to the title in the game).
+Version 2.1 (shown as **v2.1** next to the title in the game). See the version history at the bottom.
 
 A WW2 submarine stealth game, played through the periscope. North Atlantic, 1942: you command an Allied submarine on a campaign against the German surface fleet. Hunt warships, raid harbours and rescue downed airmen without being found.
 
@@ -68,3 +68,8 @@ Three difficulties (Easy, Normal, Veteran), background music and spoken crew cal
 | T | Time compression (1× 2× 4× 8×) |
 | M | Enlarge plotting table |
 | P / Esc | Pause and settings |
+
+## Version history
+- **2.1** — More natural male crew voices with a voice picker; realistic shellfire (whistle, splash, delayed gun report); explosions as ships sink, bigger for bigger ships; on phones, pop-up messages show one at a time in a small strip at the top.
+- **2** — Torpedo types, battery and air, aircraft, hydrophone station, deck gun, U-boat duel, system damage, neutral ships, training mission, campaign map, medals and ranks.
+- **1** — Campaign, refits, weather, smarter destroyers, music and crew callouts, realistic effects, sinking close-up.
