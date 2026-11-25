@@ -162,7 +162,9 @@
     #pBoat .row{margin-top:2px} #rudderTxt{font-size:10px} #hullbar{height:5px;margin-top:3px}
     #pBoat .row.hullrow{display:none}
     .cb{min-width:48px;padding:7px 8px;font-size:13px} .cb kbd{display:none} .cb.fire{min-width:76px;font-size:17px}
-    #toasts{width:80%;top:auto;bottom:40%}
+    #toasts{width:calc(100% - 16px);top:6px;bottom:auto;z-index:5}
+    .toast{font-size:11.5px;padding:4px 9px;line-height:1.25;max-width:100%;box-shadow:0 4px 14px #000a}
+    .toast.crew{font-size:13px}
     #cine{width:84%;bottom:auto;top:8px}
     #tut{width:94%;bottom:auto;top:8px;font-size:14px}
     .medals{grid-template-columns:1fr}
@@ -433,7 +435,7 @@ function setupMission(n,spec){
   const M = spec||missionSpec(n); G.mis=M;
   G.night=M.night; G.wx=WEATHER[M.wx];
   G.t=0; G.ts=1; G.ships=[]; G.torps=[]; G.charges=[]; G.fx=[]; G.booms=[]; G.flares=[]; G.mines=[]; G.lock=null; G.endT=-1;
-  G.land=null; G.raft=null; G.cine=null; $('cine').hidden=true; toastsEl.innerHTML=''; VO.last={};
+  G.land=null; G.raft=null; G.cine=null; $('cine').hidden=true; toastsEl.innerHTML=''; TQ.length=0; VO.last={};
   G.stats = {fired:0,hits:0,detected:false,sunk:[],escaped:0,tons:0,rescued:false,captured:false,neutral:0,gunKills:0,uboat:0,battleship:0};
   G.sys={scope:0,motors:0,flood:0}; G.gunAmmo=GUN_AMMO; G.gunCd=0; G.shells=[]; G.eshells=[]; G.planes=[]; G.hydro=false; G.ttype='steam'; G.planeT=rnd(50,110); G.zoom=false;
   const s=G.sub; s.x=0; s.y=0; s.depth=SCOPE_DEPTH; s.dTarget=SCOPE_DEPTH; s.scopeWant=true; s.scope=1; s.upT=0; s.set=1; s.spd=3; s.batt=100; s.air=100;
@@ -684,10 +686,25 @@ function say(key, text, gap=8, urgent=false, quiet=false){
 
 /* ================= UI helpers ================= */
 const toastsEl=$('toasts');
+// On phones: one small message at a time along the top edge, queued, so the periscope stays clear.
+const phoneQ = matchMedia('(max-width:760px)');
+const TQ = []; let tBusy = false;
 function toast(msg, kind=''){
+  if(phoneQ.matches){
+    if(TQ.some(t=>t.msg===msg)) return;
+    if(TQ.length>=3){ const i=TQ.findIndex(t=>t.kind!=='bad'); TQ.splice(i>=0?i:0,1); }   // keep warnings, drop chatter
+    TQ.push({msg,kind}); if(!tBusy) nextToast(); return;
+  }
   const d=document.createElement('div'); d.className='toast '+kind; d.textContent=msg; toastsEl.appendChild(d);
   while(toastsEl.children.length>3) toastsEl.firstChild.remove();
   setTimeout(()=>d.remove(), 3800);
+}
+function nextToast(){
+  const t=TQ.shift(); toastsEl.innerHTML='';
+  if(!t){ tBusy=false; return; }
+  tBusy=true;
+  const d=document.createElement('div'); d.className='toast '+t.kind; d.textContent=t.msg; toastsEl.appendChild(d);
+  setTimeout(nextToast, TQ.length ? 1600 : 2600);
 }
 const tubesEl=$('tubes');
 tubesEl.innerHTML=[1,2,3,4].map(i=>`<div class="tube"><i></i><span>${i}</span></div>`).join('');
