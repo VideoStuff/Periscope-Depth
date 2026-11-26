@@ -151,6 +151,24 @@
   .award{border:1px solid var(--brass);border-radius:9px;padding:9px 12px;margin:10px 0;background:#1a1810;color:#f1d79a;font-size:16px}
   .log{font-family:var(--mono);font-size:13px;display:grid;grid-template-columns:auto 1fr auto;gap:3px 12px}
   .log .w{color:var(--safe)} .log .l{color:var(--danger)}
+  .award.lost{border-color:var(--danger);color:#ffb4a6;background:#1c0f0d}
+  .report{margin:12px 0;border:1px solid var(--line);border-radius:9px;padding:8px 11px;background:#0e1513}
+  .report summary{cursor:pointer;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);font-weight:700}
+  .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0}
+  .photo{margin:0;background:#e9e2cf;padding:5px 5px 4px;border-radius:2px;transform:rotate(-.6deg);box-shadow:0 6px 16px #000a}
+  .photo:nth-child(2n){transform:rotate(.7deg)}
+  .photo img{width:100%;display:block;filter:sepia(.6) grayscale(.25) contrast(1.12) brightness(.95)}
+  .photo figcaption{font-family:var(--mono);font-size:11px;color:#3a3428;text-align:center;padding-top:3px}
+  .plog{font-family:var(--mono);font-size:13px;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:8px;color:#d8d0b9}
+  .plog span:nth-child(odd){color:var(--brass)}
+  .crew{display:grid;gap:6px}
+  .cm{padding:7px 10px;border:1px solid #ffffff14;border-radius:8px;background:#0e1513;display:grid;grid-template-columns:1fr auto;gap:1px 10px;align-items:baseline}
+  .cm small{color:var(--muted);font-size:13px} .cm.hurt{border-color:#e2553f66} .cm.hurt small:last-child{color:#ff9b88}
+  .achs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+  .achv{padding:8px 10px;border:1px solid #ffffff12;border-radius:8px;opacity:.5}
+  .achv.got{opacity:1;border-color:var(--brass);background:#1a1810}
+  .achv b{display:block;font-size:15px} .achv small{display:block;color:var(--muted);font-size:13px;line-height:1.25}
+  .achv .bar{height:5px;background:#1a2320;border-radius:3px;margin:5px 0 2px;overflow:hidden} .achv .bar i{display:block;height:100%;background:var(--brass)}
   @media (max-width:760px){
     #brand{font-size:18px} #mission{font-size:13px}
     .panel{width:clamp(132px,41%,190px);font-size:12px;padding:7px 9px}
@@ -167,11 +185,27 @@
     .toast.crew{font-size:13px}
     #cine{width:84%;bottom:auto;top:8px}
     #tut{width:94%;bottom:auto;top:8px;font-size:14px}
-    .medals{grid-template-columns:1fr}
+    .medals,.achs{grid-template-columns:1fr}
     .cols{grid-template-columns:1fr}
     .card{padding:18px 16px}
   }
   @media (hover:none){.cb kbd{display:none}}
+  /* phones held sideways: header strip on top, scope on the left, a compact button column on the right */
+  @media (orientation:landscape) and (max-height:520px){
+    #app{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:6px;padding-block:4px}
+    #top{grid-column:1/-1;min-height:22px} #brand{font-size:15px} #mission{font-size:12px} .ibtn{padding:3px 8px;font-size:12px}
+    #stage{grid-column:1;grid-row:2}
+    #controls{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(3,50px);gap:4px;align-content:center;overflow:auto}
+    .grp{display:contents}
+    .cb{min-width:0;padding:5px 2px;font-size:11px;border-radius:7px} .cb kbd{display:none}
+    .cb.fire{grid-column:1/-1;font-size:16px;padding:7px 0;min-width:0}
+    .panel{width:clamp(112px,19%,170px);font-size:11px;padding:5px 7px} .row b{font-size:11px} .row{margin-top:2px} .opt{display:none} #detState{font-size:13px}
+    #compass{width:32px;height:32px} #hdgBig{font-size:14px} #pBoat .lbl,#pBoat .hlbl{display:none} #rudderTxt{font-size:10px}
+    #pBoat .row.hullrow{display:none} #hullbar{height:5px;margin-top:3px}
+    #mapWrap{width:clamp(90px,17%,150px)} #mapWrap.big{width:min(60%,330px)} .tube{height:20px} #meter{height:10px}
+    #toasts{width:46%;top:6px;bottom:auto} #cine{width:40%;top:auto;bottom:8px} #tut{width:56%;top:auto;bottom:8px;font-size:12px}
+    .cols{grid-template-columns:1fr 1fr}
+  }
   @media (prefers-reduced-motion:reduce){#detState.danger{animation:none} .toast{animation:none}}
 </style>
 </head>
@@ -245,6 +279,7 @@
       <button class="cb" data-act="zoom" id="bZoom">Zoom<kbd>Z</kbd></button>
       <button class="cb" data-act="scope" id="bScope">Lower<kbd>Q</kbd></button>
       <button class="cb" data-act="hydro" id="bHydro">Listen<kbd>H</kbd></button>
+      <button class="cb" data-act="room" id="bRoom">Room<kbd>R</kbd></button>
     </div>
     <div class="grp">
       <button class="cb fire" data-act="fire" id="bFire">FIRE<kbd>SPACE</kbd></button>
@@ -281,7 +316,7 @@ const fmt = n => Math.round(n).toLocaleString('en-US');
 const pad3 = n => String(Math.round(wrap360(n))%360).padStart(3,'0');
 function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/0.5; }
 const MONO = "'Share Tech Mono', ui-monospace, Menlo, monospace";
-const VERSION = 'v2.2';
+const VERSION = 'v2.3';
 
 /* ================= constants ================= */
 const SCOPE_DEPTH = 14, DEEP = 70, MAX_SCOPE_DEPTH = 17, MAX_FIRE_DEPTH = 22;
@@ -364,6 +399,61 @@ for (const k in TYPES){ const T=TYPES[k]; T.key=k;
   T.Hmax=Math.max(...T.prof.map(s=>s.t==='m'?s.y1:s.t==='r'?s.y1:s.t==='b'?s.y:Math.max(...s.pts.map(p=>p[1]))));
   T.fb=T.prof.find(s=>s.hull).fb; T.funnels=T.prof.filter(s=>s.fun).map(s=>s.fun); T.masts=T.prof.filter(s=>s.t==='m').map(s=>[s.x,s.y1]); }
 
+/* ================= crew ================= */
+const CREW_ROLES=[
+  {id:'officer', rank:'Lieutenant',     job:'First Lieutenant',      perk:'plots firing solutions faster'},
+  {id:'sonar',   rank:'Leading Seaman', job:'Sonar operator',        perk:'hears ships farther away'},
+  {id:'torpedo', rank:'Petty Officer',  job:"Torpedo gunner's mate", perk:'reloads the tubes faster'},
+  {id:'lookout', rank:'Able Seaman',    job:'Lookout',               perk:'sees farther and spots aircraft sooner'},
+  {id:'engineer',rank:'Chief ERA',      job:'Engineer',              perk:'repairs damage faster and stretches the battery'},
+];
+const CREW_FIRST=['Harry','Tom','Alfie','Jack','George','Bill','Arthur','Stan','Ernie','Reg','Len','Wilf','Jim','Ted','Frank','Sid','Charlie','Albert','Walter','Percy'];
+const CREW_LAST=['Walsh','Baker','Hughes','Turner','Price','Ellis','Carter','Doyle','Murray','Fletcher','Cole','Barnes','Shaw','Webb','Pike','Dawson','Hale','Kerr','Lowe','Napier'];
+const CREW_XP=[0,3,7,12,18];
+const newCrewman = role => ({role, name:pick(CREW_FIRST)+' '+pick(CREW_LAST), xp:0, hurt:0});
+const crewLvl = c => CREW_XP.filter(x=>c.xp>=x).length;          // 1..5
+const roleOf = id => CREW_ROLES.find(r=>r.id===id);
+// skill bonus: 0 for a new hand, up to 4 for a veteran, -1 while he is injured and someone else covers his station
+function crewK(role){ const cr=G.career&&G.career.crew; const c=cr&&cr.find(x=>x.role===role); if(!c) return 0; return c.hurt>0?-1:crewLvl(c)-1; }
+
+/* ================= achievements ================= */
+const ACH=[
+  {id:'night',   name:'Night Owl',          desc:'Sink a ship at night.'},
+  {id:'fog',     name:'Pea Souper',         desc:'Sink a ship in fog.'},
+  {id:'silent',  name:'Silent Killer',      desc:'Sink a ship with an electric torpedo and finish the mission undetected.'},
+  {id:'long',    name:'Long Shot',          desc:'Hit a ship with a torpedo that ran more than 2.5 km.'},
+  {id:'far',     name:'Marksman',           desc:'Sink a moving ship from more than 3 km away.'},
+  {id:'gun3',    name:'Gunboat Diplomacy',  desc:'Sink 3 ships with the deck gun.', goal:3, prog:()=>G.career.cnt.gunKills},
+  {id:'hits25',  name:'Torpedo Expert',     desc:'Land 25 torpedo hits.', goal:25, prog:()=>G.career.cnt.hits},
+  {id:'heavy',   name:'Heavyweight',        desc:'Sink 30,000 tons in a single mission.'},
+  {id:'sweep',   name:'Clean Sweep',        desc:'Sink every enemy ship in a mission, escorts included.'},
+  {id:'shave',   name:'Close Shave',        desc:'Have an enemy torpedo pass within 50 m without hitting.'},
+  {id:'dc10',    name:'Rattled',            desc:'Survive 10 depth charges in one mission.'},
+  {id:'radar',   name:'Under the Radar',    desc:'Let an aircraft pass within 1.5 km without being spotted.'},
+  {id:'fumes',   name:'Running on Fumes',   desc:'Finish a mission with under 5% battery.'},
+  {id:'lifeguard',name:'Lifeguard',         desc:'Rescue the airmen without being detected.'},
+  {id:'ghost5',  name:'Ghost Fleet',        desc:'Finish 5 missions without being detected.', goal:5, prog:()=>G.career.ghosts},
+  {id:'weather', name:'All Weathers',       desc:'Complete missions in clear, fog, rain and heavy seas.', goal:4, prog:()=>G.career.wx.length},
+  {id:'longwatch',name:'Long Watch',        desc:'Stay on patrol through a sunset or a sunrise.'},
+  {id:'veteran', name:'Old Salts',          desc:'Train a crewman to level 5.'},
+];
+function ach(id){
+  if(!G.career||!G.career.ach||G.career.ach.includes(id)||G.mis&&G.mis.type==='training') return;
+  G.career.ach.push(id); const a=ACH.find(x=>x.id===id); S.coin(); toast(`Achievement: ${a.name}`,'good'); logE(`Achievement: ${a.name}.`);
+}
+function careerFix(c){   // fill in anything an older save is missing
+  c.log=c.log||[]; c.medals=c.medals||[]; c.ghosts=c.ghosts||0; c.ach=c.ach||[]; c.cnt=Object.assign({gunKills:0,hits:0},c.cnt||{}); c.wx=c.wx||[];
+  c.crew=c.crew||CREW_ROLES.map(r=>newCrewman(r.id)); return c;
+}
+
+/* ================= time of day ================= */
+const hhmm = m => { m=((Math.round(m)%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+function dayLight(m){ m=((m%1440)+1440)%1440; if(m<330||m>=1260) return 0; if(m<420) return (m-330)/90; if(m<1170) return 1; return 1-(m-1170)/90; }
+const WX_CHANGE = {clear:['fog','rain','rough'], fog:['clear'], rain:['clear','rough'], rough:['rain','clear']};
+const WX_MSG = {fog:'A fog bank is rolling in.', rain:'Rain squalls are sweeping in.', rough:'The wind is rising. Heavy seas are building.', clear:'The weather is clearing.'};
+// the captain's patrol report: a timed log of the mission
+function logE(text){ if(!G.events) return; const last=G.events[G.events.length-1]; if(last&&last.text===text) return; G.events.push({tod:G.tod,text}); if(G.events.length>60) G.events.shift(); }
+
 /* ================= campaign ================= */
 const CAMPAIGN = [
   {type:'convoy', name:'First Contact', night:false, wx:'clear', targets:['lcruiser'], escorts:['patrol'], spd:6.5},
@@ -397,10 +487,10 @@ const G = {
   tubes:[], reserve:RESERVE, scopeBrg:0, shake:0, hurt:0, wet:0, mapBig:false,
   lock:null, stats:null, endT:-1, endReason:'', maxAlert:0, fireCd:0,
   sunBrg:0, clouds:[], stars:[], gunWarned:0, wind:{x:3,y:0},
-  diff:'normal', up:{motors:0,scope:0,reload:0,torps:0,hull:0,battery:0}, opt:{music:true,voice:true},
+  diff:'normal', up:{motors:0,scope:0,reload:0,torps:0,hull:0,battery:0}, opt:{music:true,voice:true,vib:true},
   mis:null, land:null, raft:null, cine:null,
   sys:{scope:0,motors:0,flood:0}, planes:[], shells:[], eshells:[], ttype:'steam', hydro:false, gunAmmo:GUN_AMMO, gunCd:0, planeT:999,
-  career:{log:[],medals:[],ghosts:0}, tut:-1,
+  career:careerFix({}), tut:-1, tod:720, light:1, events:[], photos:[], view:'scope',
 };
 const D = () => DIFFS[G.diff];
 try { G.best = +localStorage.getItem('periscope-depth-best')||0; } catch(e){}
@@ -424,7 +514,7 @@ function mkShip(type, role, x, y, h, v, off){
 
 function newCareer(diff){
   G.level=1; G.total=0; G.merit=0; G.diff=diff||'normal'; G.up={motors:0,scope:0,reload:0,torps:0,hull:0,battery:0};
-  G.career={log:[],medals:[],ghosts:0};
+  G.career=careerFix({});
   G.sub = {x:0,y:0,h:0,spd:3,set:1,depth:SCOPE_DEPTH,dTarget:SCOPE_DEPTH,scopeWant:true,scope:1,upT:0,hull:100,batt:100,air:100};
   resupply();
 }
@@ -434,10 +524,13 @@ function resupply(){
 }
 function setupMission(n,spec){
   const M = spec||missionSpec(n); G.mis=M;
-  G.night=M.night; G.wx=WEATHER[M.wx];
+  G.wx=WEATHER[M.wx]; G.wxKey=M.wx; G.events=[]; G.photos=[]; G.snap=null; G.view='scope';
+  G.tod = M.type==='training' ? 720 : M.night ? (rnd(21.5*60,25*60)%1440) : rnd(14*60,17.5*60);
+  G.light=dayLight(G.tod); G.night=M.night; G.palL=-1;
+  G.wxNext = M.type!=='training' && Math.random()<.45 ? {at:rnd(150,420), to:pick(WX_CHANGE[M.wx])} : null;
   G.t=0; G.ts=1; G.ships=[]; G.torps=[]; G.charges=[]; G.fx=[]; G.booms=[]; G.flares=[]; G.mines=[]; G.lock=null; G.endT=-1;
   G.land=null; G.raft=null; G.cine=null; $('cine').hidden=true; toastsEl.innerHTML=''; TQ.length=0; VO.last={};
-  G.stats = {fired:0,hits:0,detected:false,sunk:[],escaped:0,tons:0,rescued:false,captured:false,neutral:0,gunKills:0,uboat:0,battleship:0};
+  G.stats = {fired:0,hits:0,detected:false,sunk:[],escaped:0,tons:0,rescued:false,captured:false,neutral:0,gunKills:0,uboat:0,battleship:0,elecKill:false,dcs:0,lost:[],hurt:[]};
   G.sys={scope:0,motors:0,flood:0}; G.gunAmmo=GUN_AMMO; G.gunCd=0; G.shells=[]; G.eshells=[]; G.planes=[]; G.hydro=false; G.ttype='steam'; G.planeT=rnd(50,110); G.zoom=false;
   const s=G.sub; s.x=0; s.y=0; s.depth=SCOPE_DEPTH; s.dTarget=SCOPE_DEPTH; s.scopeWant=true; s.scope=1; s.upT=0; s.set=1; s.spd=3; s.batt=100; s.air=100;
   const ang = rnd(0,360), ux=Math.sin(ang*D2R), uy=Math.cos(ang*D2R);
@@ -744,7 +837,7 @@ function say(key, text, gap=8, urgent=false, quiet=false){
 /* ================= UI helpers ================= */
 const toastsEl=$('toasts');
 // On phones: one small message at a time along the top edge, queued, so the periscope stays clear.
-const phoneQ = matchMedia('(max-width:760px)');
+const phoneQ = matchMedia('(max-width:760px), (orientation:landscape) and (max-height:520px)');
 const TQ = []; let tBusy = false;
 function toast(msg, kind=''){
   if(phoneQ.matches){
@@ -796,6 +889,7 @@ function fire(){
     const d=dist(s.x,s.y,e.x,e.y); if(d<2600){ e.alert=Math.min(100,e.alert+20*(1-d/2600)*D().det); setLK(e,s.x,s.y,320); } }
   const n=G.tubes.indexOf(tube)+1;
   say('fire',`Fire ${['one','two','three','four'][n-1]}!`,0,true);
+  logE(`Fired one ${TORPS[G.ttype].name.toLowerCase()} torpedo, bearing ${pad3(h)}.`); buzz(30);
 }
 function toggleScope(){
   if(G.state!=='play') return;
@@ -867,6 +961,7 @@ function step(dt){
   updFlares(dt);
   updPlanes(dt);
   updMission(dt);
+  updClock(dt);
   updFx(dt);
   checkEnd(dt);
 }
@@ -878,7 +973,7 @@ function updSub(dt){
   // battery and air: drained underwater, recharged by the diesels on the surface
   if(G.mis.type!=='training'){
     const ez=G.diff==='easy'?.7:1;
-    if(sub){ s.batt=Math.max(0,s.batt-(.012+.5*Math.pow(s.spd/MAXSPD,2))*(1-.15*G.up.battery)*ez*dt); s.air=Math.max(0,s.air-.09*ez*dt); }
+    if(sub){ s.batt=Math.max(0,s.batt-(.012+.5*Math.pow(s.spd/MAXSPD,2))*(1-.15*G.up.battery)*(1-.04*crewK('engineer'))*ez*dt); s.air=Math.max(0,s.air-.09*ez*dt); }
     else { s.batt=Math.min(100,s.batt+.9*dt); s.air=Math.min(100,s.air+6*dt); }
     if(sub && s.batt<20) say('batt20','Battery down to twenty percent, Captain.',120);
     if(sub && s.batt<=0) say('batt0',"Battery's flat! We can't move submerged. We must surface!",45,true);
@@ -887,13 +982,14 @@ function updSub(dt){
   }
   // damage control: one party fixes the worst problem first
   const fixK=['flood','motors','scope'].find(q=>G.sys[q]>0);
-  if(fixK){ G.sys[fixK]=Math.max(0,G.sys[fixK]-dt/(fixK==='flood'?30:50));
+  if(fixK){ G.sys[fixK]=Math.max(0,G.sys[fixK]-dt*(1+.12*crewK('engineer'))/(fixK==='flood'?30:50));
     if(G.sys[fixK]===0) say('fix'+fixK,{flood:'Flooding is under control.',motors:'Motors repaired. Full power available.',scope:'Periscope optics replaced, Captain.'}[fixK],5); }
   if(G.sys.flood>0) s.hull=Math.max(0,s.hull-G.sys.flood*.25*dt);
   if(s.hull<=0 && G.state==='play'){ G.state='sinking'; setTimeout(gameOver,2600); }
   if(s.dTarget<2) s.scopeWant=true;
   G.gunCd-=dt;
-  const turn = (inp.port?-1:0)+(inp.stbd?1:0);
+  const gt=inp.gpTurn||0;
+  const turn = (inp.port||gt<-.35?-1:0)+(inp.stbd||gt>.35?1:0);
   const dh = turn*(.6+3.6*Math.min(1,s.spd/3))*dt;
   s.h = wrap360(s.h + dh);
   G.scopeBrg = wrap360(G.scopeBrg + dh); // the periscope is mounted on the boat, so it swings with her
@@ -904,7 +1000,7 @@ function updSub(dt){
   if(s.depth>MAX_SCOPE_DEPTH && s.scopeWant) s.scopeWant=false;
   s.scope += clamp((s.scopeWant?1:0)-s.scope, -dt/1.1, dt/1.6);
   s.upT = s.scope>.6 ? s.upT+dt : Math.max(0, s.upT-dt*1.5);
-  const rl=RELOAD*(1-.15*G.up.reload);
+  const rl=RELOAD*(1-.15*G.up.reload)*(1-.06*crewK('torpedo'));
   for(const t of G.tubes){ if(!t.ready && t.loading){ t.t+=dt/rl; if(t.t>=1){ t.ready=true; t.loading=false; t.t=0; } } }
   G.fireCd -= dt;
   // mines: mine-detecting sonar marks them within 450 m
@@ -912,7 +1008,7 @@ function updSub(dt){
     if(m.gone) continue;
     const h=dist(s.x,s.y,m.x,m.y);
     if(h<450 && !m.known){ m.known=true; say('mine','Mine contact! Mines ahead!',20); }
-    if(h<20 && Math.abs(s.depth-m.z)<11){ m.gone=true; damage(42,'MINE! We hit a mine!'); S.dc(1,1); G.shake=10;
+    if(h<20 && Math.abs(s.depth-m.z)<11){ m.gone=true; logE('Struck a mine.'); damage(42,'MINE! We hit a mine!'); S.dc(1,1); G.shake=10;
       column(m.x,m.y,1.6,false); G.booms.push({x:m.x,y:m.y,t:G.rt});
       for(const e of G.ships) if(!e.sunk&&!e.sinking&&dist(e.x,e.y,m.x,m.y)<4000){ e.alert=Math.max(e.alert,85); setLK(e,m.x,m.y,120); } }
   }
@@ -947,7 +1043,7 @@ function updDetect(e,dt){
   const pickup = G.raft && G.raft.prog>0 && !G.raft.done && dist(s.x,s.y,G.raft.x,G.raft.y)<70 && s.depth<MAX_SCOPE_DEPTH;
   if(scopeExposed() || pickup){
     const lit=G.night?flareLight(s.x,s.y):0;
-    const base=G.night?lerp(900,2000,lit):2000;
+    const base=lerp(900,2000,Math.max(G.light,lit));
     const vr=base*e.T.look*wx.enemy*(1+s.spd/MAXSPD*.45)*(pickup?1.5:1)*(surf?2.6:1);
     if(d<vr){
       const k=Math.pow(1-d/vr,1.4);
@@ -961,7 +1057,7 @@ function updDetect(e,dt){
   const decay = e.alert>=HUNT?1.8:4;
   e.alert = clamp(e.alert + (gain-decay)*dt, 0, 100);
   if(gain>.5) setLK(e,s.x,s.y,e.alert>=DET?40:err*(1-e.alert/150));
-  if(e.alert>=DET){ if(!G.stats.detected){ G.stats.detected=true; S.sting(); toast('DETECTED — they know where you are. Go deep!','bad'); say('det',"We've been spotted!",20,true); }
+  if(e.alert>=DET){ if(!G.stats.detected){ G.stats.detected=true; logE(`Detected by the ${e.T.name.toLowerCase()}.`); S.sting(); toast('DETECTED — they know where you are. Go deep!','bad'); say('det',"We've been spotted!",20,true); }
     setLK(e,s.x,s.y,35); if(e.role==='target') alarmGroup(s.x,s.y); }
 }
 function emitShip(e,dt){
@@ -1134,11 +1230,14 @@ function updPlanes(dt){
     else if(scopeExposed() && d<1600) gain=14*(1-d/1600)*(1+s.spd/MAXSPD*2)*(1-.15*G.up.scope);
     gain*=D().det*(G.wx.rain?.6:1);
     p.alert=clamp(p.alert+(gain-6)*dt,0,100);
-    if(!p.called && scopeExposed() && d<5000){ p.called=true; say('plane',`Aircraft! Bearing ${pad3(brgTo(s.x,s.y,p.x,p.y))}! Take her down!`,15,true); }
+    if(!p.called && scopeExposed() && d<5000*(1+.1*crewK('lookout'))){ p.called=true; say('plane',`Aircraft! Bearing ${pad3(brgTo(s.x,s.y,p.x,p.y))}! Take her down!`,15,true); }
     if(p.alert>=100 && !p.attack){ p.attack=true; G.stats.detected=true; toast('The aircraft has spotted you and is diving to attack!','bad');
       for(const o of G.ships){ if(o.role==='neutral'||o.sunk||o.sinking) continue; o.alert=Math.max(o.alert,HUNT+10); setLK(o,s.x,s.y,150); } }
     if(p.attack && p.bombs>0){ p.h=turnTo(p.h,brgTo(p.x,p.y,s.x,s.y),25*dt);
       if(d<60){ for(let i=0;i<p.bombs;i++) G.charges.push({x:s.x+gauss()*22,y:s.y+gauss()*22,z:0,setZ:rnd(6,22)}); p.bombs=0; splashSmall(s.x,s.y); } }
+    if(d<1500 && !p.attack) p.close=true;
+    if(p.close && !p.attack && d>3000 && !p.done){ p.done=true; ach('radar'); }
+    if(!p.logged && d<5000 && scopeExposed()){ p.logged=true; logE(`Aircraft sighted, bearing ${pad3(brgTo(s.x,s.y,p.x,p.y))}.`); }
     p.x+=Math.sin(p.h*D2R)*p.v*dt; p.y+=Math.cos(p.h*D2R)*p.v*dt;
   }
   G.planes=G.planes.filter(p=>p.life<240 && !(p.life>30 && dist(s.x,s.y,p.x,p.y)>8000));
@@ -1190,6 +1289,8 @@ function updCharges(dt){
       G.shake=Math.max(G.shake, clamp(260/(r+25),0,10));
       G.booms.push({x:c.x,y:c.y,t:G.rt});
       column(c.x,c.y,clamp(1.4-c.setZ/90,.45,1.1),false);
+      if(r<150){ G.stats.dcs++; if(G.rt-(G.dcLogT||-99)>60){ G.dcLogT=G.rt; logE('Depth-charged.'); } }
+      if(r<90) buzz(r<40?[140,60,220]:[70]);
       if(r<30) damage(24+26*(1-r/30),'Depth charge — direct hit! Taking water!');
       else if(r<72) damage(3+9*(1-(r-30)/42),'Depth charge close aboard');
     }
@@ -1214,13 +1315,35 @@ function damage(n,msg){
   n*=D().dmg*(1-.12*G.up.hull);
   const s=G.sub; s.hull=Math.max(0,s.hull-n); G.hurt=1; G.shake=Math.max(G.shake,6);
   if(n>=7 && s.hull>0 && Math.random()<Math.min(.75,n/35)) breakSystem();
+  if(n>=12 && s.hull>0 && Math.random()<Math.min(.55,n/45)) injureCrew(n>=28);
+  buzz(n>=25?[160,60,260]:[90]);
   if(msg) toast(`${msg}  −${Math.round(n)}%`,'bad');
   if(s.hull<30 && s.hull>0) say('flood','We are taking on water! Hull is failing!',30,true);
   if(s.hull<=0 && G.state==='play'){ G.state='sinking'; setTimeout(gameOver,2600); }
 }
+function updClock(dt){
+  if(G.mis.type==='training') return;
+  G.tod+=dt;                                    // one second of sea time is one minute of the clock
+  const L=dayLight(G.tod), wasNight=G.night; G.light=L; G.night=L<.45;
+  if(G.night!==wasNight){ logE(G.night?'Sunset. Darkness falls.':'Dawn breaks.'); toast(G.night?'Night is falling.':'Dawn is breaking.'); ach('longwatch'); }
+  if(G.wxNext && G.t>=G.wxNext.at){ const to=G.wxNext.to; G.wxNext=null; G.wx=WEATHER[to]; G.wxKey=to;
+    G.clouds=Array.from({length:to==='clear'?9:16},()=>({b:rnd(0,360),e:rnd(1.5,9),w:rnd(8,30),h:rnd(1.2,3.5),a:rnd(.25,.6)}));
+    toast(WX_MSG[to]); logE(WX_MSG[to]); G.palL=-1; }
+  if(Math.abs(L-G.palL)>.015){ G.pal=makePal(); G.palL=L; }
+}
+function injureCrew(severe){
+  const cr=G.career.crew.filter(c=>c.hurt<=0); if(!cr.length) return;
+  const c=pick(cr), r=roleOf(c.role);
+  if(severe && Math.random()<.25){
+    G.stats.lost.push(`${r.rank} ${c.name}`); toast(`${r.rank} ${c.name} was killed.`,'bad'); logE(`${r.rank} ${c.name}, ${r.job.toLowerCase()}, was killed.`);
+    Object.assign(c,newCrewman(c.role));
+  } else { c.hurt=Math.random()<.4?2:1; G.stats.hurt.push(`${r.rank} ${c.name}`); toast(`${r.rank} ${c.name} is injured.`,'bad'); logE(`${r.rank} ${c.name} injured.`); }
+}
+function buzz(pat){ if(!G.opt.vib) return; try{ navigator.vibrate && navigator.vibrate(pat); }catch(e){} }
 function breakSystem(){
   const k=pick(['scope','motors','flood','flood']);
   G.sys[k]=Math.min(1,G.sys[k]+rnd(.45,.85));
+  logE({scope:'Periscope optics damaged.',motors:'Motors damaged.',flood:'Flooding aft.'}[k]);
   say('sys'+k,{scope:'The periscope is damaged! Optics cracked!',motors:'Motors damaged! We can only make slow speed!',flood:'Flooding aft! Damage control party, move!'}[k],8,true);
 }
 function updTorps(dt){
@@ -1231,7 +1354,8 @@ function updTorps(dt){
       if(t.run-t.lastT>7){ t.lastT=t.run; t.trail.push({x:t.x,y:t.y,t:G.t,j:rnd(-.6,.6),s:rnd(.8,1.25)}); }
       if(t.run>t.range){ t.alive=false; if(!t.enemy) toast('Torpedo ran out of fuel — missed'); continue; }
       if(t.enemy){ const s=G.sub, d=dist(t.x,t.y,s.x,s.y);
-        if(d<14 && s.depth<30){ t.alive=false; S.thit(1,1); explosion(t.x,t.y,{T:{L:60,B:6,fb:2}}); damage(55,"TORPEDO HIT! We've been torpedoed!"); }
+        if(d<50) t.near=true; else if(t.near && !t.shaved && G.state==='play'){ t.shaved=true; ach('shave'); }
+        if(d<14 && s.depth<30){ t.alive=false; t.shaved=true; buzz([300,100,300]); S.thit(1,1); explosion(t.x,t.y,{T:{L:60,B:6,fb:2}}); damage(55,"TORPEDO HIT! We've been torpedoed!"); }
         else if(d<2500 && !t.warned && Math.abs(wrap180(brgTo(t.x,t.y,s.x,s.y)-t.h))<20){ t.warned=true; say('etorp2','Torpedo closing! Hard over! Go deep!',6,true); }
         continue; }
       for(const e of G.ships){
@@ -1263,7 +1387,9 @@ function updTorps(dt){
   for(const t of G.torps) while(t.trail.length && G.t-t.trail[0].t>24) t.trail.shift();
 }
 function hitShip(e,t){
-  G.stats.hits++; e.hp--;
+  G.stats.hits++; e.hp--; G.career.cnt.hits++; if(G.career.cnt.hits>=25) ach('hits25');
+  if(t.run>2500) ach('long'); if(t.type==='electric') e.elecHit=true;
+  logE(`Torpedo hit on the ${e.idd?e.T.name.toLowerCase():'target'}.`);
   const s=G.sub, d=dist(s.x,s.y,e.x,e.y);
   S.thit(clamp(900/(d+300),.15,1), clamp(1-d/4000,0,1), shipSize(e), Math.min(3,d/1500));
   if(d<6000) G.shake=Math.max(G.shake,clamp(3000/(d+200),0,3));
@@ -1302,11 +1428,15 @@ function sinkShip(e,how){
   else {
     G.stats.tons+=e.T.tons; G.stats.sunk.push(e.T.name);
     if(how==='gun') G.stats.gunKills++; if(e.T.key==='uboat') G.stats.uboat++; if(e.T.key==='battleship') G.stats.battleship++;
+    if(G.night) ach('night'); if(G.wx.fog) ach('fog'); if(e.elecHit) G.stats.elecKill=true;
+    if(how==='gun'){ G.career.cnt.gunKills++; if(G.career.cnt.gunKills>=3) ach('gun3'); }
+    if(how==='torp' && e.v>2 && dist(G.sub.x,G.sub.y,e.x,e.y)>3000) ach('far');
+    logE(`${e.T.name} sank. ${fmt(e.T.tons)} tons.`);
     toast(`SUNK: ${e.T.name} · ${fmt(e.T.tons)} t`,'good');
     say('sunk',pick(["She's going down!","She's breaking up! Good shooting!","Got her! She's sinking!"]),0,true);
   }
   if(G.lock===e) G.lock=null;
-  if(e.T.tons>=2000) startCine(e);
+  if(e.T.tons>=2000) startCine(e); else G.snap={e,at:G.rt+1.4};
   const d=dist(G.sub.x,G.sub.y,e.x,e.y); S.groan(clamp(1200/(d+400),.08,1), Math.min(4,d/1500)+1.5, shipSize(e));
 }
 /* ---- particles ---- kinds: water (white, falls), mist (white haze), fire, flash, smoke (dark), fsmoke (funnel) */
@@ -1358,7 +1488,7 @@ function checkEnd(dt){
     else if(!torpsLeft){ G.endT=G.t+4; G.endReason='dry'; toast('Out of torpedoes — breaking off the attack'); }
   } else if(G.t>=G.endT) debrief();
 }
-function visRange(){ return (G.night?3300:7500)*G.wx.vis; }
+function visRange(){ return lerp(3300,7500,G.light)*G.wx.vis*(1+.05*crewK('lookout')); }
 function isVisible(e){
   if(!scopeExposed()) return false;
   const s=G.sub, d=dist(s.x,s.y,e.x,e.y);
@@ -1374,6 +1504,7 @@ function updSighting(dt){
     if(e.sunk||e.escaped) continue;
     if(isVisible(e)){
       e.seenT=G.t; e.seenX=e.x; e.seenY=e.y; e.seenH=e.h;
+      if(!e.logged){ e.logged=true; logE(`Sighted a ship bearing ${pad3(brgTo(G.sub.x,G.sub.y,e.x,e.y))}, about ${(dist(G.sub.x,G.sub.y,e.x,e.y)/1000).toFixed(1)} km.`); }
       const rel=Math.abs(wrap180(brgTo(s.x,s.y,e.x,e.y)-G.scopeBrg));
       const d=dist(s.x,s.y,e.x,e.y);
       const score = rel - Math.atan(e.T.L*.5/d)/D2R;
@@ -1382,8 +1513,8 @@ function updSighting(dt){
     if(e.sol>0 && G.t-e.obsT>25) e.sol=Math.max(0,e.sol-dt/30);
   }
   G.lock=best;
-  if(best){ const was=best.sol; best.sol=Math.min(1,best.sol+dt/((G.zoom?2.2:3.4)/D().solve)); best.obsT=G.t;
-    if(best.sol>=.35 && !best.idd){ best.idd=true; if(best.T.neutral) say('idn','Neutral colours on that one, Captain. Hold your fire.',20); }
+  if(best){ const was=best.sol; best.sol=Math.min(1,best.sol+dt/((G.zoom?2.2:3.4)*(1-.07*crewK('officer'))/D().solve)); best.obsT=G.t;
+    if(best.sol>=.35 && !best.idd){ best.idd=true; logE(`Identified a ${best.T.name.toLowerCase()}${best.T.neutral?' under neutral colours':''}.`); if(best.T.neutral) say('idn','Neutral colours on that one, Captain. Hold your fire.',20); }
     if(was<1&&best.sol>=1) say('sol',`Solution ready on the ${best.idd?best.T.name.toLowerCase():'target'}.`,6); }
 }
 function solution(e){
@@ -1428,12 +1559,17 @@ const rgb = (a,al=1) => `rgba(${a[0]|0},${a[1]|0},${a[2]|0},${al})`;
 const mix = (a,b,t) => [lerp(a[0],b[0],t),lerp(a[1],b[1],t),lerp(a[2],b[2],t)];
 const mul = (a,k) => [a[0]*k,a[1]*k,a[2]*k];
 function makePal(){
-  const b=G.night?PAL.night:PAL.day, wx=G.wx, p=JSON.parse(JSON.stringify(b));
-  const fogC=G.night?[30,36,42]:[156,164,164], rainC=G.night?[14,18,24]:[110,118,122];
+  const L=G.light===undefined?(G.night?0:1):G.light, wx=G.wx, D_=PAL.day, N=PAL.night;
+  const p={}; for(const k of ['skyT','skyH','seaH','seaN','wave','land']) p[k]=mix(N[k],D_[k],L);
+  p.ship=[0,1,2].map(i=>mix(N.ship[i],D_.ship[i],L));
+  const nightRet=L<.4; p.ret=nightRet?N.ret:D_.ret; p.retT=nightRet?N.retT:D_.retT;
+  const dk=L>0&&L<1?Math.sin(Math.PI*L):0;     // sunset / sunrise glow
+  if(dk>0 && !wx.fog){ p.skyH=mix(p.skyH,[236,150,92],.6*dk); p.skyT=mix(p.skyT,[92,80,118],.4*dk); p.seaH=mix(p.seaH,[120,88,78],.3*dk); }
+  const fogC=mix([30,36,42],[156,164,164],L), rainC=mix([14,18,24],[110,118,122],L);
   if(wx.fog>=1){ p.skyT=mix(p.skyT,fogC,.85); p.skyH=mix(p.skyH,fogC,.9); p.seaH=mix(p.seaH,fogC,.6); }
   else if(wx.rain){ p.skyT=mix(p.skyT,rainC,.75); p.skyH=mix(p.skyH,rainC,.55); p.seaH=mix(p.seaH,rainC,.3); p.seaN=mul(p.seaN,.85); }
   else if(wx.swell>2){ p.skyT=mix(p.skyT,rainC,.4); p.skyH=mix(p.skyH,rainC,.25); }
-  p.fogC=fogC; return p;
+  p.fogC=fogC; p.dusk=dk; return p;
 }
 G.pal=makePal();
 
@@ -1448,6 +1584,7 @@ function proj(env,x,y,z){
 
 function drawScope(){
   const c=ctx; c.setTransform(DPR,0,0,DPR,0,0);
+  if(G.view==='room' && G.sub){ drawRoom(c); return; }
   const R=Math.min(W,H)*.47, CX=W/2, CY=H/2;
   const fov=G.fov, f=R/Math.tan(fov/2*D2R);
   const s=G.sub, t=G.rt, wx=G.wx;
@@ -1497,16 +1634,20 @@ function drawWorld(c,env){
   const sg=c.createLinearGradient(0,skyTop,0,hy);
   sg.addColorStop(0,rgb(pal.skyT)); sg.addColorStop(1,rgb(pal.skyH));
   c.fillStyle=sg; c.fillRect(L,T,Rt-L,hy-T+1);
-  if(G.night && !wx.fog && !wx.rain){
+  const Ld=G.light===undefined?(G.night?0:1):G.light;
+  if(Ld>0 && !wx.fog){
+    const sx=bx(G.sunBrg); if(sx!==null){ const el=lerp(-1.5,17,Math.min(1,Ld*1.25)), sy=hy-Math.tan(el*D2R)*f, sr=Math.tan(.5*D2R)*f*1.6, k=(wx.rain?.35:1)*Math.min(1,Ld*3), dk=G.pal.dusk||0;
+      const cA=dk>.15?'255,190,120':'255,248,225', cB=dk>.15?'255,150,90':'255,245,220';
+      const g=c.createRadialGradient(sx,sy,0,sx,sy,sr*(9+dk*6)); g.addColorStop(0,`rgba(${cA},${.8*k})`); g.addColorStop(.2,`rgba(${cB},${.3*k})`); g.addColorStop(1,`rgba(${cB},0)`);
+      c.fillStyle=g; c.fillRect(sx-sr*15,sy-sr*15,sr*30,sr*30); }
+  }
+  if(Ld<.6 && !wx.fog && !wx.rain){
+    const sf=1-Ld/.6;
     for(const st of G.stars){ const x=bx(st.b); if(x===null) continue; const y=hy-Math.tan(st.e*D2R)*f;
-      c.fillStyle=`rgba(220,228,255,${(.25+.55*st.m*(0.7+0.3*Math.sin(t*2+st.b)))*(1-light)})`; c.fillRect(x,y,1.2,1.2); }
-    const mx=bx(G.sunBrg); if(mx!==null){ const my=hy-Math.tan(24*D2R)*f, mr=Math.tan(.6*D2R)*f*1.4;
+      c.fillStyle=`rgba(220,228,255,${(.25+.55*st.m*(0.7+0.3*Math.sin(t*2+st.b)))*(1-light)*sf})`; c.fillRect(x,y,1.2,1.2); }
+    const mx=Ld<.35?bx(G.sunBrg+180):null; if(mx!==null){ const my=hy-Math.tan(24*D2R)*f, mr=Math.tan(.6*D2R)*f*1.4;
       const mg=c.createRadialGradient(mx,my,0,mx,my,mr*6); mg.addColorStop(0,'rgba(200,210,230,.35)'); mg.addColorStop(1,'rgba(200,210,230,0)');
       c.fillStyle=mg; c.fillRect(mx-mr*6,my-mr*6,mr*12,mr*12); c.fillStyle='#d9dde6'; c.beginPath(); c.arc(mx,my,mr,0,TAU); c.fill(); }
-  } else if(!G.night && !wx.fog){
-    const sx=bx(G.sunBrg); if(sx!==null){ const sy=hy-Math.tan(17*D2R)*f, sr=Math.tan(.5*D2R)*f*1.6, k=wx.rain?.35:1;
-      const g=c.createRadialGradient(sx,sy,0,sx,sy,sr*9); g.addColorStop(0,`rgba(255,248,225,${.75*k})`); g.addColorStop(.2,`rgba(255,245,220,${.25*k})`); g.addColorStop(1,'rgba(255,245,220,0)');
-      c.fillStyle=g; c.fillRect(sx-sr*9,sy-sr*9,sr*18,sr*18); }
   }
   if(!wx.fog) for(const cl of G.clouds){
     const r=wrap180(cl.b-brg); if(Math.abs(r)>fv+cl.w) continue;
@@ -1795,7 +1936,75 @@ function drawSoundRim(c,R,CX,CY){
   if(G.raft && !G.raft.done && !G.raft.lost){ const rb=wrap180(brgTo(s.x,s.y,G.raft.x,G.raft.y)-G.scopeBrg)*D2R, rr=R-10;
     c.fillStyle='rgba(150,220,120,.9)'; c.beginPath(); c.arc(CX+Math.sin(rb)*rr,CY-Math.cos(rb)*rr,Math.max(4,R*.016),0,TAU); c.fill(); }
 }
-function hearRange(e){ return e.T.sub ? (e.dep<1?7000:2600) : 9000; }
+/* ---- control room: the boat's gauges, the crew at their stations, and the mood of the boat ---- */
+function gauge(c,x,y,r,label,val,min,max,txt,opt={}){
+  c.save(); c.translate(x,y);
+  const g=c.createRadialGradient(-r*.3,-r*.3,r*.1,0,0,r); g.addColorStop(0,'#2a2f2a'); g.addColorStop(1,'#101411');
+  c.fillStyle=g; c.beginPath(); c.arc(0,0,r,0,TAU); c.fill();
+  c.lineWidth=Math.max(3,r*.09); c.strokeStyle='#8a6e3a'; c.beginPath(); c.arc(0,0,r,0,TAU); c.stroke();
+  c.fillStyle='#e7dec8'; c.beginPath(); c.arc(0,0,r*.86,0,TAU); c.globalAlpha=.08; c.fill(); c.globalAlpha=1;
+  const a0=-225*D2R, a1=45*D2R, A=v=>a0+(a1-a0)*clamp((v-min)/(max-min),0,1);
+  if(opt.red!==undefined){ c.strokeStyle='rgba(226,85,63,.75)'; c.lineWidth=r*.1; c.beginPath(); c.arc(0,0,r*.74,A(min),A(opt.red)); c.stroke(); }
+  if(opt.marks) for(const m of opt.marks){ c.strokeStyle='#f1d79a'; c.lineWidth=2; const a=A(m); c.beginPath(); c.moveTo(Math.cos(a)*r*.62,Math.sin(a)*r*.62); c.lineTo(Math.cos(a)*r*.82,Math.sin(a)*r*.82); c.stroke(); }
+  c.strokeStyle='#cfc6ae'; c.lineWidth=1;
+  for(let i=0;i<=10;i++){ const a=a0+(a1-a0)*i/10, l=i%5?.08:.16; c.beginPath(); c.moveTo(Math.cos(a)*r*(.82-l),Math.sin(a)*r*(.82-l)); c.lineTo(Math.cos(a)*r*.82,Math.sin(a)*r*.82); c.stroke(); }
+  const a=A(val); c.strokeStyle='#f0e6cc'; c.lineWidth=Math.max(2,r*.05); c.lineCap='round';
+  c.beginPath(); c.moveTo(-Math.cos(a)*r*.12,-Math.sin(a)*r*.12); c.lineTo(Math.cos(a)*r*.72,Math.sin(a)*r*.72); c.stroke();
+  c.fillStyle='#8a6e3a'; c.beginPath(); c.arc(0,0,r*.08,0,TAU); c.fill();
+  c.textAlign='center'; c.fillStyle='#e7dec8'; c.font=`${Math.max(10,r*.2)}px ${MONO}`; c.fillText(txt,0,r*.5);
+  c.fillStyle='#c9a45c'; c.font=`600 ${Math.max(10,r*.17)}px 'Barlow Condensed',sans-serif`; c.fillText(label.toUpperCase(),0,r+Math.max(13,r*.24));
+  c.restore();
+}
+function drawRoom(c){
+  const s=G.sub, t=G.rt;
+  const silent=s.set<=1 && G.maxAlert>=SUS && s.depth>2, alarm=s.hull<30||G.state==='sinking';
+  let sx=0, sy=0; if(G.shake>.05){ sx=rnd(-1,1)*G.shake*1.5; sy=rnd(-1,1)*G.shake*1.5; }
+  c.save(); c.translate(sx,sy);
+  const bg=c.createLinearGradient(0,0,0,H);
+  if(silent||alarm){ bg.addColorStop(0,'#2a0d09'); bg.addColorStop(1,'#0b0302'); } else { bg.addColorStop(0,'#1f2622'); bg.addColorStop(1,'#080b0a'); }
+  c.fillStyle=bg; c.fillRect(-20,-20,W+40,H+40);
+  // pipes and frames
+  c.strokeStyle=silent||alarm?'#3a1611':'#2c3530'; c.lineWidth=10;
+  for(const y of [H*.06,H*.12]){ c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke(); }
+  c.lineWidth=3; for(let x=W*.08;x<W;x+=W*.16){ c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); }
+  c.fillStyle=silent||alarm?'#4a1d16':'#39433d'; for(let x=W*.15;x<W;x+=W*.22){ c.beginPath(); c.arc(x,H*.06,9,0,TAU); c.fill(); }
+  // gauges in the open middle of the screen
+  const phone=W<760, x0=phone?8:W*.23, x1=phone?W-8:W*.77, y0=phone?H*.25:34, y1=phone?H*.6:H*.7;
+  const cw=(x1-x0)/3, rh=(y1-y0)/2.6, r=Math.max(22,Math.min(cw*.36,rh*.36));
+  const gx=i=>x0+cw*(i+.5), gy=j=>y0+rh*(j+.55);
+  gauge(c,gx(0),gy(0),r,'Depth',s.depth,0,100,`${Math.round(s.depth)} m`,{marks:[SCOPE_DEPTH,DEEP]});
+  gauge(c,gx(1),gy(0),r,'Speed',s.spd,0,MAXSPD,`${Math.round(s.spd*KN)} kn`);
+  // compass repeater
+  c.save(); c.translate(gx(2),gy(0)); c.fillStyle='#101411'; c.beginPath(); c.arc(0,0,r,0,TAU); c.fill(); c.strokeStyle='#8a6e3a'; c.lineWidth=Math.max(3,r*.09); c.stroke();
+  c.rotate(-s.h*D2R); c.fillStyle='#cfc6ae'; c.textAlign='center'; c.font=`${Math.max(9,r*.18)}px ${MONO}`;
+  for(const [d,l] of [[0,'N'],[90,'E'],[180,'S'],[270,'W']]){ c.save(); c.rotate(d*D2R); c.fillText(l,0,-r*.62); c.restore(); }
+  c.restore();
+  c.strokeStyle='#f1d79a'; c.lineWidth=2.5; c.beginPath(); c.moveTo(gx(2),gy(0)+r*.25); c.lineTo(gx(2),gy(0)-r*.75); c.stroke();
+  c.fillStyle='#e7dec8'; c.textAlign='center'; c.font=`${Math.max(10,r*.2)}px ${MONO}`; c.fillText(pad3(s.h)+'°',gx(2),gy(0)+r*.55);
+  c.fillStyle='#c9a45c'; c.font=`600 ${Math.max(10,r*.17)}px 'Barlow Condensed',sans-serif`; c.fillText('HEADING',gx(2),gy(0)+r+Math.max(13,r*.24));
+  gauge(c,gx(0),gy(1.25),r,'Battery',s.batt,0,100,`${Math.round(s.batt)}%`,{red:20});
+  gauge(c,gx(1),gy(1.25),r,'Air',s.air,0,100,`${Math.round(s.air)}%`,{red:20});
+  gauge(c,gx(2),gy(1.25),r,'Hull',s.hull,0,100,`${Math.round(s.hull)}%`,{red:30});
+  // crew at their stations
+  const cy=phone?H*.69:H*.87, n=G.career.crew.length, cx0=phone?W*.1:W*.29, cx1=phone?W*.9:W*.71;
+  G.career.crew.forEach((cm,i)=>{ const x=cx0+(cx1-cx0)*i/(n-1), bob=Math.sin(t*1.3+i)*1.2, hs=Math.max(7,r*.18);
+    c.fillStyle=silent||alarm?'#4a1c15':'#34403a';
+    c.beginPath(); c.arc(x,cy-hs*3.1+bob,hs,0,TAU); c.fill();
+    c.beginPath(); c.moveTo(x-hs*1.4,cy+bob); c.quadraticCurveTo(x-hs*1.5,cy-hs*2.1+bob,x,cy-hs*2.2+bob); c.quadraticCurveTo(x+hs*1.5,cy-hs*2.1+bob,x+hs*1.4,cy+bob); c.fill();
+    if(cm.hurt>0){ c.fillStyle='#e2553f'; c.fillRect(x-hs*.25,cy-hs*1.7+bob,hs*.5,hs*1.2); c.fillRect(x-hs*.6,cy-hs*1.35+bob,hs*1.2,hs*.5); }
+    c.fillStyle=cm.hurt>0?'#ff9b88':'#cfc6ae'; c.textAlign='center'; c.font=`${Math.max(9,r*.15)}px ${MONO}`;
+    c.fillText(cm.name.split(' ')[1],x,cy+Math.max(12,r*.22)); c.fillStyle='#8e9a92'; c.fillText(roleOf(cm.role).job.split(' ')[0],x,cy+Math.max(23,r*.4)); });
+  // flooding: water sloshing over the deck plates
+  if(G.sys.flood>0){ const wh=H*.12*G.sys.flood; c.fillStyle='rgba(40,90,95,.55)'; c.beginPath(); c.moveTo(0,H);
+    for(let x=0;x<=W;x+=12) c.lineTo(x,H-wh+Math.sin(x*.03+t*2.4)*4); c.lineTo(W,H); c.closePath(); c.fill(); }
+  // lamps flicker under depth charges
+  if(G.shake>3 && Math.random()<.35){ c.fillStyle='rgba(0,0,0,.45)'; c.fillRect(-20,-20,W+40,H+40); }
+  c.textAlign='center'; c.font=`${Math.max(11,Math.min(W,H)*.022)}px ${MONO}`; c.fillStyle=silent||alarm?'#ff9b88':'#8e9a92';
+  c.fillText((silent?'RIG FOR SILENT RUNNING':alarm?'DAMAGE CONTROL':'CONTROL ROOM')+(phone?'  ·  Room returns to the periscope':''), W/2, phone?H*.225:18+Math.min(W,H)*.02);
+  if(!phone){ c.fillStyle='rgba(233,226,207,.45)'; c.fillText('R (or Room) returns to the periscope', W/2, H-8); }
+  c.restore();
+}
+function hearRange(e){ return (e.T.sub ? (e.dep<1?7000:2600) : 9000)*(1+.08*crewK('sonar')); }
 function shipNoise(e){ return (e.v/10+.3)*(e.T.sub?(e.dep<1?1:.35):1)*(e.listenT>0?.15:1); }
 // what the hydrophones pick up on a bearing: summed intensity and the loudest source
 function hydroAt(b){
@@ -1939,7 +2148,22 @@ function drawCine(dt){
   const env={R:Math.max(w,h)/2,CX:w/2,CY:h/2,f,hy:h*.58+Math.sin(G.rt*.6)*1.5,eye:5,t:G.rt,main:false,cam};
   c.save(); c.translate(w/2,h/2); c.rotate(Math.sin(G.rt*.5)*.008); c.translate(-w/2,-h/2);
   drawWorld(c,env); c.restore();
+  if(!C.shot && C.t>2.6){ C.shot=true; takePhoto(cc,0,0,cc.width,cc.height,C.e); }
   const vg=c.createRadialGradient(w/2,h/2,h*.3,w/2,h/2,w*.7); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.55)'); c.fillStyle=vg; c.fillRect(0,0,w,h);
+}
+// a "periscope photograph" for the patrol report
+function takePhoto(src,sx,sy,sw,sh,e){
+  if(G.photos.length>=4) return;
+  try{ const o=document.createElement('canvas'); o.width=320; o.height=180; const g=o.getContext('2d');
+    const k=Math.max(320/sw,180/sh), w=320/k, h=180/k; g.drawImage(src,sx+(sw-w)/2,sy+(sh-h)/2,w,h,0,0,320,180);
+    G.photos.push({src:o.toDataURL('image/jpeg',.72), cap:`${e.T.name} · ${hhmm(G.tod)}`}); }catch(err){}
+}
+function snapCheck(){
+  const S_=G.snap; if(!S_||G.rt<S_.at) return; G.snap=null;
+  if(!isVisible(S_.e)) return;
+  const R=Math.min(W,H)*.47, rel=wrap180(brgTo(G.sub.x,G.sub.y,S_.e.x,S_.e.y)-G.scopeBrg), f=R/Math.tan(G.fov/2*D2R);
+  const x=(W/2+Math.tan(rel*D2R)*f)*DPR, y=(H/2)*DPR, w=R*1.1*DPR, h=w*9/16;
+  takePhoto(cv,x-w/2,y-h*.6,w,h,S_.e);
 }
 $('cineX').addEventListener('click',()=>{ G.cine=null; $('cine').hidden=true; });
 
@@ -2046,6 +2270,7 @@ function updHud(){
   $('bGun').classList.toggle('dim',!surfaced());
   $('bSurf').firstChild.textContent = s.dTarget<2?'Dive':'Surface';
   $('bHydro').classList.toggle('on',G.hydro);
+  $('bRoom').classList.toggle('on',G.view==='room');
   const st=$('solTxt');
   if(G.lock){ st.textContent=G.lock.sol>=1?(D().aim?'READY ◆':'READY'):`${Math.round(G.lock.sol*100)}%`; st.className=G.lock.sol>=1?'ok':'caution'; }
   else { st.textContent='No target'; st.className=''; }
@@ -2059,7 +2284,7 @@ function updHud(){
   $('bTime').firstChild.textContent = `Time ${G.ts}×`;
   $('bTime').classList.toggle('on',G.ts>1);
   const M=G.mis||{};
-  $('mission').innerHTML=`<b>${M.type==='training'?'':G.level+'. '}${M.name||''}</b> · ${G.night?'Night':'Day'} · ${G.wx.name} · <b>${fmt(G.total+(G.stats?G.stats.tons:0))} t</b>`;
+  $('mission').innerHTML=`<b>${M.type==='training'?'':G.level+'. '}${M.name||''}</b> · ${hhmm(G.tod)} · ${G.wx.name} · <b>${fmt(G.total+(G.stats?G.stats.tons:0))} t</b>`;
 }
 function updCompass(){
   const s=G.sub; if(!s) return;
@@ -2091,6 +2316,16 @@ const CONTROLS = `
     <div>Surface / dive <kbd>V</kbd></div><div>Deck gun (surfaced) <kbd>G</kbd></div>
     <div>Steam / electric torpedo <kbd>X</kbd></div><div>Hydrophone station <kbd>H</kbd></div>
     <div>Big plotting table <kbd>M</kbd></div><div>Pause · settings <kbd>P · Esc</kbd></div>
+    <div>Control room view <kbd>R</kbd></div><div></div>
+  </div>
+  <h3>Game controller</h3>
+  <div class="cols">
+    <div>Turn periscope <kbd>Left stick</kbd></div><div>Steer the boat <kbd>Right stick</kbd></div>
+    <div>Fire torpedo <kbd>A</kbd></div><div>Raise / lower periscope <kbd>B</kbd></div>
+    <div>Dive deep / rise <kbd>X</kbd></div><div>Surface / dive <kbd>Y</kbd></div>
+    <div>Zoom out / in <kbd>LT · RT</kbd></div><div>Hydrophones · torpedo type <kbd>LB · RB</kbd></div>
+    <div>Speed up / down <kbd>D-pad ↑ ↓</kbd></div><div>Deck gun · control room <kbd>D-pad ← →</kbd></div>
+    <div>Plotting table · pause <kbd>View · Menu</kbd></div><div>Time compression <kbd>Left stick click</kbd></div>
   </div>`;
 const STEALTH = `
   <ul class="tips">
@@ -2108,6 +2343,7 @@ function optsHtml(){
   return `<div class="opts">
     <button class="opt-btn ${G.opt.music?'on':''}" data-go="opt:music">Music: ${G.opt.music?'On':'Off'}</button>
     <button class="opt-btn ${G.opt.voice?'on':''}" data-go="opt:voice">Crew voices: ${G.opt.voice?'On':'Off'}</button>
+    ${'vibrate' in navigator?`<button class="opt-btn ${G.opt.vib?'on':''}" data-go="opt:vib">Vibration: ${G.opt.vib?'On':'Off'}</button>`:''}
     ${window.VOICE_CLIPS?`<button class="opt-btn" data-go="voicetest">Test crew voices</button>`:''}
     ${!window.VOICE_CLIPS&&VO.ok&&crewVoices().length?`<button class="opt-btn" data-go="voicepick">Voice: ${(G.opt.voiceName&&crewVoices().find(v=>v.name===G.opt.voiceName)?G.opt.voiceName:'Auto · '+crewVoices()[0].name).replace(/^Microsoft |Online \(Natural\) - |\s*\(.*\)$/g,'')}</button>`:''}
   </div>
@@ -2123,10 +2359,12 @@ const GO = {
     <div class="choice">${Object.entries(DIFFS).map(([k,d])=>`<button data-go="start:${k}"><b>${d.name}</b>${d.desc}</button>`).join('')}</div>
     <div class="btnrow"><button class="go alt" data-go="title">Back</button></div>`); },
   start(diff){ newCareer(diff); clearCareer(); brief(); },
-  cont(){ const sv=loadCareer(); if(!sv) return GO.newgame(); newCareer(sv.diff); G.level=sv.level; G.total=sv.total; G.merit=sv.merit; G.up=Object.assign(G.up,sv.up); G.career=sv.career||G.career; G.sub.hull=sv.hull; resupply(); brief(); },
+  cont(){ const sv=loadCareer(); if(!sv) return GO.newgame(); newCareer(sv.diff); G.level=sv.level; G.total=sv.total; G.merit=sv.merit; G.up=Object.assign(G.up,sv.up); G.career=careerFix(sv.career||{}); G.sub.hull=sv.hull; resupply(); brief(); },
   training(){ newCareer('easy'); setupMission(0,{type:'training',name:'Training Run',night:false,wx:'clear',targets:['tanker'],escorts:[]}); hideOverlay(); G.state='play'; G.tut=0; showTut(); G.last=performance.now(); },
-  record(from){ G.recFrom=from; if(from==='title'){ const sv=loadCareer(); if(sv){ G.career=sv.career||{log:[],medals:[],ghosts:0}; G.total=sv.total; G.diff=sv.diff; } }
+  record(from){ G.recFrom=from; if(from==='title'){ const sv=loadCareer(); if(sv){ G.career=careerFix(sv.career||{}); G.total=sv.total; G.diff=sv.diff; } }
     showOverlay(recordHtml()+`<button class="go" data-go="recback">Back</button>`); },
+  achs(from){ G.recFrom=from; if(from==='title'){ const sv=loadCareer(); if(sv){ G.career=careerFix(sv.career||{}); G.total=sv.total; } }
+    showOverlay(achHtml()+`<button class="go" data-go="recback">Back</button>`); },
   recback(){ const f=G.recFrom; if(f==='debrief') renderDebrief(); else if(f==='pause') pauseCard(); else titleScreen(); },
   title(){ titleScreen(); },
   launch(){ hideOverlay(); G.state='play'; G.last=performance.now(); },
@@ -2180,6 +2418,7 @@ function recordHtml(){
     ${mapSvg()}
     <h3>Decorations · ${c.medals.length} of ${MEDALS.length}</h3>
     <div class="medals">${MEDALS.map(m=>`<div class="medal ${c.medals.includes(m.id)?'got':''}"><span class="rib"></span><div><b>${m.name}</b><small>${m.desc}</small></div></div>`).join('')}</div>
+    <h3>Crew</h3>${crewHtml()}
     <h3>Mission log</h3>
     ${c.log.length?`<div class="log">${c.log.map(l=>`<span>${l.n}.</span><span>${l.name}</span><span class="${l.win?'w':'l'}">${l.res}</span>`).join('')}</div>`:'<p>No missions yet.</p>'}`;
 }
@@ -2215,7 +2454,7 @@ function titleScreen(){
     <div class="btnrow">
       ${sv?`<button class="go" data-go="cont">Continue · Mission ${sv.level}</button><button class="go alt" data-go="newgame">New career</button>`:`<button class="go" data-go="newgame">Begin career</button>`}
       <button class="go alt" data-go="training">Training</button>
-      ${sv?`<button class="go alt" data-go="record:title">Service record</button>`:''}
+      ${sv?`<button class="go alt" data-go="record:title">Service record</button><button class="go alt" data-go="achs:title">Achievements</button>`:''}
     </div>
     <h3>How to attack</h3>
     <ul class="tips">
@@ -2289,6 +2528,23 @@ function debrief(){
   G.career.log.push({n:G.level,name:M.name,win,res:win?(st.tons?fmt(st.tons)+' t':'success'):G.endReason==='dry'?'no ammo':G.endReason==='captured'?'failed':'escaped'});
   const fresh=MEDALS.filter(m=>!G.career.medals.includes(m.id)&&m.test(st)); fresh.forEach(m=>G.career.medals.push(m.id));
   const rankAfter=rankOf(G.total);
+  // achievements judged at the end of the mission
+  if(st.elecKill && !st.detected) ach('silent');
+  if(st.tons>=30000) ach('heavy');
+  if(win && G.sub.batt<5) ach('fumes');
+  if(st.rescued && !st.detected) ach('lifeguard');
+  if(st.dcs>=10) ach('dc10');
+  if(G.career.ghosts>=5) ach('ghost5');
+  if(win){ for(const w of [M.wx,G.wxKey]) if(!G.career.wx.includes(w)) G.career.wx.push(w); if(G.career.wx.length>=4) ach('weather'); }
+  if(win && G.ships.some(e=>e.role==='escort') && G.ships.filter(e=>e.role!=='neutral').every(e=>e.sinking>0||e.sunk)) ach('sweep');
+  // the crew: experience, recovery, promotions
+  const crewNews=[];
+  for(const c of G.career.crew){ const r=roleOf(c.role), before=crewLvl(c);
+    if(c.hurt>0){ c.hurt--; if(c.hurt===0) crewNews.push(`${r.rank} ${c.name} is back on duty.`); }
+    c.xp+= (win?2:1) + Math.min(3,st.sunk.length);
+    if(crewLvl(c)>before) crewNews.push(`${r.rank} ${c.name} (${r.job.toLowerCase()}) reached level ${crewLvl(c)}: ${r.perk}.`);
+    if(crewLvl(c)>=5) ach('veteran'); }
+  logE(`Mission ended. ${G.endReason==='done'?'All targets accounted for.':G.endReason==='rescued'?'Airmen rescued.':G.endReason==='dry'?'Out of torpedoes.':G.endReason==='captured'?'Airmen captured.':'Enemy escaped.'}`);
   saveBest();
   const why = {dry:'Out of torpedoes. Returning to base to rearm.', escaped:'The enemy got away.', done:'All targets accounted for.',
     rescued:'The airmen are safe aboard. Their families will hear good news tonight.', captured:'The Germans reached the raft first. The airmen are prisoners.'}[G.endReason]||'';
@@ -2307,12 +2563,31 @@ function debrief(){
     </div>
     ${rankAfter!==rankBefore?`<div class="award">Promoted to <b>${rankAfter}</b>.</div>`:''}
     ${fresh.map(m=>`<div class="award">Awarded the <b>${m.name}</b>: ${m.desc}</div>`).join('')}
+    ${st.lost.length?`<div class="award lost">Lost: ${st.lost.join(', ')}. A new hand joins the crew.</div>`:''}
+    ${crewNews.map(n=>`<div class="award">${n}</div>`).join('')}
+    ${reportHtml()}
     <p>The tender patches the hull (+40%), recharges the battery and reloads every tube.</p>`;
   if(rankAfter!==rankBefore||fresh.length) S.coin();
   saveCareer();
   renderDebrief();
 }
-function renderDebrief(){ showOverlay(`${G.lastResult}${upgradesHtml()}<div class="btnrow"><button class="go" data-go="next">Next mission</button><button class="go alt" data-go="record:debrief">Service record</button></div>`); }
+function reportHtml(){
+  return `<details class="report" open><summary>Captain's patrol report</summary>
+    ${G.photos.length?`<div class="photos">${G.photos.map(p=>`<figure class="photo"><img src="${p.src}" alt="Periscope photograph: ${p.cap}"><figcaption>${p.cap}</figcaption></figure>`).join('')}</div>`:''}
+    <div class="plog">${G.events.map(e=>`<span>${hhmm(e.tod)}</span><span>${e.text}</span>`).join('')}</div></details>`;
+}
+function crewHtml(){
+  return `<div class="crew">${G.career.crew.map(c=>{ const r=roleOf(c.role), lv=crewLvl(c);
+    return `<div class="cm ${c.hurt>0?'hurt':''}"><b>${r.rank} ${c.name}</b><small>${r.job} · ${r.perk}</small>
+      <span class="pips">${'■'.repeat(lv)}${'□'.repeat(5-lv)}</span><small>${c.hurt>0?'Injured, recovering':'Level '+lv+(lv<5?` · ${CREW_XP[lv]-c.xp} xp to next`:' · veteran')}</small></div>`; }).join('')}</div>`;
+}
+function achHtml(){
+  const got=G.career.ach;
+  return `<h2>Achievements</h2><div class="eyebrow">${got.length} of ${ACH.length} unlocked</div>
+    <div class="achs">${ACH.map(a=>{ const ok=got.includes(a.id), pr=a.goal?Math.min(a.goal,a.prog()):0;
+      return `<div class="achv ${ok?'got':''}"><b>${a.name}</b><small>${a.desc}</small>${a.goal&&!ok?`<div class="bar"><i style="width:${pr/a.goal*100}%"></i></div><small>${pr} / ${a.goal}</small>`:''}</div>`; }).join('')}</div>`;
+}
+function renderDebrief(){ showOverlay(`${G.lastResult}${upgradesHtml()}<div class="btnrow"><button class="go" data-go="next">Next mission</button><button class="go alt" data-go="record:debrief">Service record</button><button class="go alt" data-go="achs:debrief">Achievements</button></div>`); }
 function gameOver(){
   G.state='over';
   G.total+=G.stats.tons; saveBest(); clearCareer();
@@ -2329,7 +2604,7 @@ function gameOver(){
 }
 function saveBest(){ if(G.total>G.best){ G.best=G.total; try{ localStorage.setItem('periscope-depth-best',String(G.best)); }catch(e){} } }
 function pauseCard(){ showOverlay(`<h2>Paused</h2><div class="eyebrow">${rankOf(G.total)} · Mission ${G.level} · ${G.mis.name} · ${D().name} · ${VERSION}</div>
-  ${G.mis.type!=='training'?'<div class="btnrow"><button class="go alt" data-go="record:pause">Service record</button></div>':''}<h3>Sound</h3>${optsHtml()}<h3>Controls</h3>${CONTROLS}<h3>Staying hidden</h3>${STEALTH}<button class="go" data-go="resume">Resume</button>`); }
+  ${G.mis.type!=='training'?'<div class="btnrow"><button class="go alt" data-go="record:pause">Service record</button><button class="go alt" data-go="achs:pause">Achievements</button></div>':''}<h3>Sound</h3>${optsHtml()}<h3>Controls</h3>${CONTROLS}<h3>Staying hidden</h3>${STEALTH}<button class="go" data-go="resume">Resume</button>`); }
 function pause(){
   if(G.state!=='play') return;
   G.prevState=G.state; G.state='paused';
@@ -2357,6 +2632,7 @@ addEventListener('keydown',e=>{
     case 'KeyX': toggleTorp(); break;
     case 'KeyG': fireGun(); break;
     case 'KeyH': toggleHydro(); break;
+    case 'KeyR': toggleRoom(); break;
     case 'KeyT': toggleTime(); break;
     case 'KeyM': toggleMap(); break;
     case 'KeyP': case 'Escape': if(playing) pause(); else if(G.state==='paused') GO.resume(); break;
@@ -2375,7 +2651,8 @@ document.querySelectorAll('[data-hold]').forEach(b=>{
   const off=()=>{ inp[k]=false; b.classList.remove('held'); };
   b.addEventListener('pointerdown',on); b.addEventListener('pointerup',off); b.addEventListener('pointercancel',off); b.addEventListener('lostpointercapture',off);
 });
-const ACTS={fire,gun:fireGun,ttype:toggleTorp,surface:toggleSurface,hydro:toggleHydro,scope:toggleScope,zoom:toggleZoom,slower:()=>setSpeed(-1),faster:()=>setSpeed(1),dive:toggleDive,time:toggleTime};
+function toggleRoom(){ if(G.state!=='play') return; G.view=G.view==='room'?'scope':'room'; S.click(); }
+const ACTS={room:toggleRoom,fire,gun:fireGun,ttype:toggleTorp,surface:toggleSurface,hydro:toggleHydro,scope:toggleScope,zoom:toggleZoom,slower:()=>setSpeed(-1),faster:()=>setSpeed(1),dive:toggleDive,time:toggleTime};
 document.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>{ auInit(); ACTS[b.dataset.act](); b.blur(); }));
 function toggleMap(){ G.mapBig=!G.mapBig; $('mapWrap').classList.toggle('big',G.mapBig); }
 $('mapWrap').addEventListener('click',toggleMap);
@@ -2395,12 +2672,41 @@ const endDrag=()=>{ drag=null; };
 cv.addEventListener('pointerup',endDrag); cv.addEventListener('pointercancel',endDrag);
 cv.addEventListener('wheel',e=>{ e.preventDefault(); const z=e.deltaY<0; if(z!==G.zoom) toggleZoom(); },{passive:false});
 
+/* ================= game controller ================= */
+const GP={prev:[], seen:false};
+addEventListener('gamepadconnected',()=>{ if(!GP.seen){ GP.seen=true; toast('Controller connected. Press Start (Menu) to see its buttons.'); } });
+function pollPad(dt){
+  if(!navigator.getGamepads) return;
+  let gp=null; try{ gp=[...navigator.getGamepads()].find(p=>p&&p.connected); }catch(e){ return; }
+  if(!gp){ inp.gpTurn=0; return; }
+  const b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed), hit=i=>b(i)&&!GP.prev[i];
+  const ax=i=>{ const v=gp.axes[i]||0; return Math.abs(v)<.18?0:v; };
+  if(!ov.hidden){   // menus: D-pad moves between buttons, A presses
+    const btns=[...ov.querySelectorAll('button:not([disabled])')]; if(btns.length){
+      let i=btns.indexOf(document.activeElement);
+      if(hit(13)||hit(15)){ i=(i+1)%btns.length; btns[i].focus(); }
+      if(hit(12)||hit(14)){ i=(i-1+btns.length)%btns.length; btns[i].focus(); }
+      if(hit(0)){ auInit(); (i>=0?btns[i]:btns[0]).click(); }
+      if(hit(9)&&G.state==='paused') GO.resume(); }
+  } else if(G.state==='play'){
+    const lx=ax(0); if(lx) G.scopeBrg=wrap360(G.scopeBrg+lx*Math.abs(lx)*(G.zoom?22:85)*dt);
+    inp.gpTurn=ax(2);
+    if(hit(0)) fire(); if(hit(1)) toggleScope(); if(hit(2)) toggleDive(); if(hit(3)) toggleSurface();
+    if(hit(4)) toggleHydro(); if(hit(5)) toggleTorp();
+    if(hit(6)&&G.zoom) toggleZoom(); if(hit(7)&&!G.zoom) toggleZoom();
+    if(hit(8)) toggleMap(); if(hit(9)) pause(); if(hit(10)) toggleTime(); if(hit(11)) toggleRoom();
+    if(hit(12)) setSpeed(1); if(hit(13)) setSpeed(-1); if(hit(14)) fireGun(); if(hit(15)) toggleRoom();
+  }
+  GP.prev=gp.buttons.map(x=>x.pressed);
+}
+
 /* ================= main loop ================= */
 G.last=performance.now();
 function frame(now){
   let dt=Math.min(.05,(now-G.last)/1000); G.last=now;
   G.rt+=dt;
   G.fov = lerp(G.fov, G.zoom?9:36, Math.min(1,dt*10));
+  pollPad(dt);
   if(G.state==='play'||G.state==='sinking'){
     const rate=(inp.fast?75:28)*(G.zoom?.3:1);
     if(inp.scopeL) G.scopeBrg=wrap360(G.scopeBrg-rate*dt);
@@ -2418,7 +2724,7 @@ function frame(now){
     if(G.state==='title'){ const tgt=brgTo(0,0,G.group.x,G.group.y); G.scopeBrg=wrap360(G.scopeBrg+clamp(wrap180(tgt-G.scopeBrg),-4*dt,4*dt)); }
   }
   G.shake*=Math.pow(.02,dt); G.hurt*=Math.pow(.1,dt);
-  drawScope(); drawMap(); updCompass();
+  drawScope(); snapCheck(); drawMap(); updCompass();
   hudT-=dt; if(hudT<=0){ hudT=.1; updHud(); }
   auUpdate();
   requestAnimationFrame(frame);
