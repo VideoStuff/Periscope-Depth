@@ -88,11 +88,24 @@
   #cineCap{position:absolute;left:0;right:0;top:0;padding:6px 34px 10px 9px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:#f1d79a;background:linear-gradient(#000b,#0000)}
   #cineX{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:#000a;color:var(--paper);cursor:pointer;font-size:13px;line-height:1}
 
-  #controls{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:stretch}
-  .grp{display:flex;gap:6px;align-items:stretch}
+  /* Controls are grouped into the boat's stations, each with a brass nameplate, as in a real control room */
+  #controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:stretch}
+  .stn{display:flex;flex-direction:column;gap:5px;background:linear-gradient(180deg,#19221f,#0f1514);border:1px solid #ffffff12;border-top:2px solid var(--stc);border-radius:9px;padding:4px 6px 6px;min-width:0}
+  .stn h4{margin:0;align-self:center;font:700 10px/1.35 var(--body);letter-spacing:.18em;text-transform:uppercase;color:#ecd79e;
+    background:linear-gradient(#3b3019,#1f190c);border:1px solid #c9a45c77;border-radius:3px;padding:1px 9px;box-shadow:inset 0 1px 0 #ffffff26,0 1px 2px #000a;white-space:nowrap}
+  .sbtns{display:flex;gap:5px;align-items:stretch;flex:1}
+  .st-scope{--stc:#8fb4c9} .st-fire{--stc:#e2553f} .st-helm{--stc:#c9a45c} .st-dive{--stc:#7fb59a} .st-sonar{--stc:#6fc2b6}
+  .tele{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:3px 7px;border-radius:7px;background:#0a0e0d;border:1px solid #c9a45c55;font:700 9px/1.15 var(--mono);text-transform:uppercase;letter-spacing:.08em}
+  .tele i{font-style:normal;color:#4b5651} .tele i.on{color:#f1d79a;text-shadow:0 0 6px #c9a45c}
   .cb{font-family:var(--body);font-weight:600;font-size:15px;letter-spacing:.03em;color:var(--paper);background:var(--steel-2);
     border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:58px;touch-action:none}
   .cb kbd{font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:400}
+  @media (min-width:761px){ .cb{padding:6px 8px;min-width:50px;font-size:14px} .cb.fire{min-width:80px} .sbtns{gap:4px} #controls{gap:6px} .stn{padding:4px 5px 5px} }
+  @media (min-width:761px) and (max-width:1240px){ .cb small.cap{display:none} .cb{padding:6px 6px;min-width:44px;font-size:13.5px} .cb.fire{min-width:70px;font-size:18px} .tele{padding:3px 5px} }
+  .cb{position:relative} .cb small.cap{font-size:10.5px;color:var(--muted);font-weight:500;letter-spacing:.02em;line-height:1}
+  .cb.lamp::before{content:'';position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#252b28;box-shadow:inset 0 0 0 1px #000}
+  .cb.lamp.on::before{background:var(--lampc,#7fe0a0);box-shadow:0 0 7px var(--lampc,#7fe0a0)}
+  .cb.lamp.red{--lampc:#ff6a50}
   .cb:hover{border-color:var(--brass)} .cb:active,.cb.held{background:#2b3633;border-color:var(--brass)}
   .cb.fire{background:#5a1c14;border-color:#e2553f88;color:#ffe2d8;min-width:92px;font-family:var(--display);font-size:20px;letter-spacing:.08em}
   .cb.fire:active{background:#7a271b}
@@ -179,7 +192,11 @@
     #pBoat .lbl,#pBoat .hlbl{display:none}
     #pBoat .row{margin-top:2px} #rudderTxt{font-size:10px} #hullbar{height:5px;margin-top:3px}
     #pBoat .row.hullrow{display:none}
-    .cb{min-width:48px;padding:7px 8px;font-size:13px} .cb kbd{display:none} .cb.fire{min-width:76px;font-size:17px}
+    #controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+    .stn{padding:3px 4px 4px;gap:3px} .stn h4{font-size:8.5px;padding:0 6px;letter-spacing:.12em}
+    .st-scope,.st-fire{grid-column:span 3} .st-helm{grid-column:span 4} .st-dive{grid-column:span 2} .st-sonar{grid-column:span 6}
+    .sbtns{gap:3px} .tele{display:none}
+    .cb{min-width:0;flex:1 1 0;padding:7px 2px;font-size:12.5px} .cb kbd,.cb small.cap{display:none} .cb.fire{min-width:0;flex:1.5 1 0;font-size:16px}
     #toasts{width:calc(100% - 16px);top:6px;bottom:auto;z-index:5}
     .toast{font-size:11.5px;padding:4px 9px;line-height:1.25;max-width:100%;box-shadow:0 4px 14px #000a}
     .toast.crew{font-size:13px}
@@ -195,10 +212,12 @@
     #app{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:6px;padding-block:4px}
     #top{grid-column:1/-1;min-height:22px} #brand{font-size:15px} #mission{font-size:12px} .ibtn{padding:3px 8px;font-size:12px}
     #stage{grid-column:1;grid-row:2}
-    #controls{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(3,50px);gap:4px;align-content:center;overflow:auto}
-    .grp{display:contents}
-    .cb{min-width:0;padding:5px 2px;font-size:11px;border-radius:7px} .cb kbd{display:none}
-    .cb.fire{grid-column:1/-1;font-size:16px;padding:7px 0;min-width:0}
+    #controls{grid-column:2;grid-row:2;display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px;width:186px;overflow:auto;justify-content:center}
+    .stn{padding:2px 4px 4px;gap:2px;grid-column:auto} .stn h4{font-size:8px;padding:0 6px}
+    .sbtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+    .st-scope .sbtns,.st-helm .sbtns{grid-template-columns:repeat(4,minmax(0,1fr))} .st-dive .sbtns{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .cb{min-width:0;padding:5px 1px;font-size:10.5px;border-radius:6px} .cb kbd,.cb small.cap,.tele{display:none}
+    .cb.fire{font-size:14px;padding:5px 0;min-width:0}
     .panel{width:clamp(112px,19%,170px);font-size:11px;padding:5px 7px} .row b{font-size:11px} .row{margin-top:2px} .opt{display:none} #detState{font-size:13px}
     #compass{width:32px;height:32px} #hdgBig{font-size:14px} #pBoat .lbl,#pBoat .hlbl{display:none} #rudderTxt{font-size:10px}
     #pBoat .row.hullrow{display:none} #hullbar{height:5px;margin-top:3px}
@@ -273,28 +292,33 @@
   </main>
 
   <nav id="controls" aria-label="Boat controls">
-    <div class="grp">
-      <button class="cb" data-hold="scopeL">&#9664; Scope<kbd>&larr;</kbd></button>
-      <button class="cb" data-hold="scopeR">Scope &#9654;<kbd>&rarr;</kbd></button>
-      <button class="cb" data-act="zoom" id="bZoom">Zoom<kbd>Z</kbd></button>
-      <button class="cb" data-act="scope" id="bScope">Lower<kbd>Q</kbd></button>
-      <button class="cb" data-act="hydro" id="bHydro">Listen<kbd>H</kbd></button>
-      <button class="cb" data-act="room" id="bRoom">Room<kbd>R</kbd></button>
-    </div>
-    <div class="grp">
-      <button class="cb fire" data-act="fire" id="bFire">FIRE<kbd>SPACE</kbd></button>
-      <button class="cb" data-act="ttype" id="bTtype">Steam<kbd>X</kbd></button>
-      <button class="cb dim" data-act="gun" id="bGun">Gun<kbd>G</kbd></button>
-    </div>
-    <div class="grp">
-      <button class="cb" data-hold="port">Port<kbd>A</kbd></button>
-      <button class="cb" data-hold="stbd">Stbd<kbd>D</kbd></button>
-      <button class="cb" data-act="slower">Slower<kbd>S</kbd></button>
-      <button class="cb" data-act="faster">Faster<kbd>W</kbd></button>
-      <button class="cb" data-act="dive" id="bDive">Dive<kbd>C</kbd></button>
-      <button class="cb" data-act="surface" id="bSurf">Surface<kbd>V</kbd></button>
-      <button class="cb" data-act="time" id="bTime">Time 1&times;<kbd>T</kbd></button>
-    </div>
+    <section class="stn st-scope" aria-label="Periscope station"><h4>Periscope</h4><div class="sbtns">
+      <button class="cb" data-hold="scopeL" title="Turn the periscope left (or drag the view)">&#9664; Turn<small class="cap">look left</small><kbd>&larr;</kbd></button>
+      <button class="cb" data-hold="scopeR" title="Turn the periscope right (or drag the view)">Turn &#9654;<small class="cap">look right</small><kbd>&rarr;</kbd></button>
+      <button class="cb lamp" data-act="zoom" id="bZoom" title="Switch the periscope between 1.5× and 6× magnification">Zoom<small class="cap" id="zoomCap">1.5×</small><kbd>Z</kbd></button>
+      <button class="cb lamp" data-act="scope" id="bScope" title="Raise or lower the periscope. Lowered, the enemy can't see it.">Lower<small class="cap">periscope</small><kbd>Q</kbd></button>
+    </div></section>
+    <section class="stn st-fire" aria-label="Torpedo firing panel"><h4>Torpedo firing</h4><div class="sbtns">
+      <button class="cb fire" data-act="fire" id="bFire" title="Fire a torpedo along the periscope bearing">FIRE<kbd>SPACE</kbd></button>
+      <button class="cb" data-act="ttype" id="bTtype" title="Choose steam (fast, visible trail) or electric (no trail, slower) torpedoes">Steam<small class="cap">torpedo type</small><kbd>X</kbd></button>
+      <button class="cb lamp dim" data-act="gun" id="bGun" title="Fire the deck gun. Only works on the surface.">Deck gun<small class="cap">surfaced only</small><kbd>G</kbd></button>
+    </div></section>
+    <section class="stn st-helm" aria-label="Helm and engine telegraph"><h4>Helm &amp; engines</h4><div class="sbtns">
+      <button class="cb" data-hold="port" title="Hold to turn the boat to port (left)">&#9664; Port<small class="cap">steer left</small><kbd>A</kbd></button>
+      <button class="cb" data-hold="stbd" title="Hold to turn the boat to starboard (right)">Stbd &#9654;<small class="cap">steer right</small><kbd>D</kbd></button>
+      <div class="tele" id="tele" aria-label="Engine telegraph"><i>Full</i><i>Half</i><i>Slow</i><i>Stop</i></div>
+      <button class="cb" data-act="slower" title="Ring down one speed on the engine telegraph. Slower is quieter.">&#9660; Slower<small class="cap">quieter</small><kbd>S</kbd></button>
+      <button class="cb" data-act="faster" title="Ring up one speed on the engine telegraph. Faster is louder.">&#9650; Faster<small class="cap">louder</small><kbd>W</kbd></button>
+    </div></section>
+    <section class="stn st-dive" aria-label="Diving station"><h4>Diving</h4><div class="sbtns">
+      <button class="cb lamp" data-act="dive" id="bDive" title="Dive to 70 m, under the layer where sonar struggles, or rise back to periscope depth">Go deep<small class="cap">70 m</small><kbd>C</kbd></button>
+      <button class="cb lamp red" data-act="surface" id="bSurf" title="Surface to recharge battery and air and use the deck gun, or dive again">Surface<small class="cap">recharge</small><kbd>V</kbd></button>
+    </div></section>
+    <section class="stn st-sonar" aria-label="Sonar and navigation"><h4>Sonar &amp; nav</h4><div class="sbtns">
+      <button class="cb lamp" data-act="hydro" id="bHydro" title="Hydrophone station: listen for ships all around">Listen<small class="cap">hydrophones</small><kbd>H</kbd></button>
+      <button class="cb lamp" data-act="room" id="bRoom" title="Switch to the control room view: gauges and crew">Ctrl room<small class="cap">gauges</small><kbd>R</kbd></button>
+      <button class="cb lamp" data-act="time" id="bTime" title="Speed up time while nobody is hunting you">Time 1&times;<small class="cap">speed up</small><kbd>T</kbd></button>
+    </div></section>
   </nav>
 </div>
 
@@ -316,7 +340,7 @@ const fmt = n => Math.round(n).toLocaleString('en-US');
 const pad3 = n => String(Math.round(wrap360(n))%360).padStart(3,'0');
 function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/0.5; }
 const MONO = "'Share Tech Mono', ui-monospace, Menlo, monospace";
-const VERSION = 'v2.3';
+const VERSION = 'v2.4';
 
 /* ================= constants ================= */
 const SCOPE_DEPTH = 14, DEEP = 70, MAX_SCOPE_DEPTH = 17, MAX_FIRE_DEPTH = 22;
@@ -2266,11 +2290,13 @@ function updHud(){
   const bt=$('battTxt'); bt.textContent=`${Math.round(s.batt)} · ${Math.round(s.air)}`; bt.className=Math.min(s.batt,s.air)<20?'bad':Math.min(s.batt,s.air)<45?'caution':'';
   const bad=Object.entries(G.sys).filter(([,v])=>v>0).map(([k,v])=>({flood:'Flooding',motors:'Motors',scope:'Periscope'}[k]+' '+Math.round(v*100)+'%'));
   $('sysRow').hidden=!bad.length; $('sysTxt').textContent=bad.join(' · ');
-  $('bTtype').firstChild.textContent=TORPS[G.ttype].name==='Steam'?'Steam':'Electric';
-  $('bGun').classList.toggle('dim',!surfaced());
-  $('bSurf').firstChild.textContent = s.dTarget<2?'Dive':'Surface';
+  $('bTtype').firstChild.textContent=G.ttype==='steam'?'Steam':'Electric';
+  $('bGun').classList.toggle('dim',!surfaced()); $('bGun').classList.toggle('on',surfaced());
+  $('bSurf').firstChild.textContent = s.dTarget<2?'Dive':'Surface'; $('bSurf').classList.toggle('on',s.depth<2);
+  $('bSurf').lastElementChild.previousElementSibling.textContent = s.dTarget<2?'leave surface':'recharge';
+  [...$('tele').children].forEach((el,i)=>el.classList.toggle('on',3-i===s.set));
   $('bHydro').classList.toggle('on',G.hydro);
-  $('bRoom').classList.toggle('on',G.view==='room');
+  $('bRoom').classList.toggle('on',G.view==='room'); $('bRoom').firstChild.textContent=G.view==='room'?'Periscope':'Ctrl room';
   const st=$('solTxt');
   if(G.lock){ st.textContent=G.lock.sol>=1?(D().aim?'READY ◆':'READY'):`${Math.round(G.lock.sol*100)}%`; st.className=G.lock.sol>=1?'ok':'caution'; }
   else { st.textContent='No target'; st.className=''; }
@@ -2278,9 +2304,10 @@ function updHud(){
   $('speedTxt').textContent=`${innerWidth<=760?['Stop','Slow','Half','Full'][s.set]:SPEED_NAMES[s.set]} · ${Math.round(s.spd*KN)} kn`;
   $('hullTxt').textContent=Math.round(s.hull)+'%';
   const hf=$('hullfill'); hf.style.width=s.hull+'%'; hf.style.background=s.hull>60?'var(--safe)':s.hull>30?'var(--warn)':'var(--danger)';
-  $('bScope').firstChild.textContent = s.scopeWant?'Lower':'Raise';
-  $('bDive').firstChild.textContent = s.dTarget>30?'Rise':s.dTarget<2?'Deep':'Dive';
-  $('bZoom').classList.toggle('on',G.zoom);
+  $('bScope').firstChild.textContent = s.scopeWant?'Lower':'Raise'; $('bScope').classList.toggle('on',s.scope>.6);
+  $('bDive').firstChild.textContent = s.dTarget>30?'Rise':'Go deep'; $('bDive').classList.toggle('on',s.depth>40);
+  $('bDive').lastElementChild.previousElementSibling.textContent = s.dTarget>30?'to 14 m':'70 m';
+  $('bZoom').classList.toggle('on',G.zoom); $('zoomCap').textContent=G.zoom?'6×':'1.5×';
   $('bTime').firstChild.textContent = `Time ${G.ts}×`;
   $('bTime').classList.toggle('on',G.ts>1);
   const M=G.mis||{};
@@ -2423,7 +2450,7 @@ function recordHtml(){
     ${c.log.length?`<div class="log">${c.log.map(l=>`<span>${l.n}.</span><span>${l.name}</span><span class="${l.win?'w':'l'}">${l.res}</span>`).join('')}</div>`:'<p>No missions yet.</p>'}`;
 }
 const TUT=[
-  {t:'Find the target. Turn the periscope with ← → (or the Scope buttons, or drag the view) until the old tanker sits in the middle of the crosshair. The pale triangle on the rim points toward it.', ok:()=>G.lock&&G.lock.train},
+  {t:'Find the target. Turn the periscope with ← → (or the Periscope ◀ Turn ▶ buttons, or drag the view) until the old tanker sits in the middle of the crosshair. The pale triangle on the rim points toward it.', ok:()=>G.lock&&G.lock.train},
   {t:'Zoom in with Z (or the Zoom button) for a closer look.', ok:()=>G.zoom},
   {t:'Keep the ship in view. The crew identifies it and plots a firing solution. Wait for SOLUTION READY.', ok:()=>G.ships[0].sol>=1},
   {t:'Turn so the crosshair sits on the orange ◆ AIM marker ahead of the ship, then press Space (or FIRE).', ok:()=>G.stats.fired>0},
