@@ -1,6 +1,6 @@
 # Periscope Depth
 
-Version 2.4 (shown as **v2.4** next to the title in the game). See the version history at the bottom.
+Version 2.5 (shown as **v2.5** next to the title in the game). See the version history at the bottom.
 
 A WW2 submarine stealth game, played through the periscope. North Atlantic, 1942: you command an Allied submarine on a campaign against the German surface fleet. Hunt warships, raid harbours and rescue downed airmen without being found.
 
@@ -94,6 +94,7 @@ The crew's lines are pre-recorded audio clips made with [Piper](https://github.c
 | Lookout | VCTK speaker p279 | VCTK corpus, CC BY 4.0 |
 
 ## Version history
+- **2.5** — Fix: buying refit upgrades no longer jumps the end-of-mission screen to the bottom.
 - **2.4** — Controls regrouped into the boat's stations (Periscope, Torpedo firing, Helm & engines, Diving, Sonar & nav), each with a brass nameplate, plain-English labels with captions, indicator lamps, an engine-telegraph readout and hover tooltips.
 - **2.3** — Named crew with experience and injuries; time of day passes and weather changes during missions; captain's patrol report with periscope photographs; 18 achievements; control room view; game controller support; phone vibration; sideways phone layout.
 - **2.2** — Recorded crew voices: every line is a pre-generated audio clip played over the intercom, with three distinct crewmen. "Test crew voices" button in the sound settings.

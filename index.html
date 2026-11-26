@@ -340,7 +340,7 @@ const fmt = n => Math.round(n).toLocaleString('en-US');
 const pad3 = n => String(Math.round(wrap360(n))%360).padStart(3,'0');
 function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)/0.5; }
 const MONO = "'Share Tech Mono', ui-monospace, Menlo, monospace";
-const VERSION = 'v2.4';
+const VERSION = 'v2.5';
 
 /* ================= constants ================= */
 const SCOPE_DEPTH = 14, DEEP = 70, MAX_SCOPE_DEPTH = 17, MAX_FIRE_DEPTH = 22;
@@ -2329,9 +2329,16 @@ function updCompass(){
 
 /* ================= screens ================= */
 const ov=$('overlay');
-function showOverlay(html){ ov.innerHTML=`<div class="card">${html}</div>`; ov.hidden=false;
+// keep: redraw the same card in place (e.g. after buying an upgrade) without losing the reader's scroll position
+function showOverlay(html, keep=false){
+  const old=ov.querySelector('.card'), top=keep&&old?old.scrollTop:0, ovTop=keep?ov.scrollTop:0;
+  const focusGo=keep&&document.activeElement&&document.activeElement.dataset?document.activeElement.dataset.go:null;
+  ov.innerHTML=`<div class="card">${html}</div>`; ov.hidden=false;
   ov.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{ auInit(); const [k,arg]=b.dataset.go.split(':'); GO[k](arg); }));
-  const f=ov.querySelector('.go'); if(f) setTimeout(()=>f.focus(),50); }
+  const card=ov.querySelector('.card');
+  if(keep){ card.scrollTop=top; ov.scrollTop=ovTop;
+    const again=focusGo&&[...ov.querySelectorAll('[data-go]')].find(x=>x.dataset.go===focusGo&&!x.disabled); if(again) again.focus({preventScroll:true}); return; }
+  const f=ov.querySelector('.go'); if(f) setTimeout(()=>f.focus({preventScroll:true}),50); }
 function hideOverlay(){ ov.hidden=true; ov.innerHTML=''; }
 const CONTROLS = `
   <div class="cols">
@@ -2396,7 +2403,7 @@ const GO = {
   title(){ titleScreen(); },
   launch(){ hideOverlay(); G.state='play'; G.last=performance.now(); },
   next(){ G.level++; const s=G.sub; s.hull=Math.min(100,s.hull+40); resupply(); saveCareer(); brief(); },
-  buy(id){ const lv=G.up[id]; if(lv>=3||G.merit<UP_COST[lv]) return; G.merit-=UP_COST[lv]; G.up[id]++; S.coin(); saveCareer(); renderDebrief(); },
+  buy(id){ const lv=G.up[id]; if(lv>=3||G.merit<UP_COST[lv]) return; G.merit-=UP_COST[lv]; G.up[id]++; S.coin(); saveCareer(); renderDebrief(true); },
   resume(){ hideOverlay(); G.state=G.prevState||'play'; G.last=performance.now(); },
   voicetest(){ voiceTest(); },
   voicepick(){ const vs=crewVoices(); if(!vs.length) return; const i=vs.findIndex(v=>v.name===G.opt.voiceName);
@@ -2614,7 +2621,7 @@ function achHtml(){
     <div class="achs">${ACH.map(a=>{ const ok=got.includes(a.id), pr=a.goal?Math.min(a.goal,a.prog()):0;
       return `<div class="achv ${ok?'got':''}"><b>${a.name}</b><small>${a.desc}</small>${a.goal&&!ok?`<div class="bar"><i style="width:${pr/a.goal*100}%"></i></div><small>${pr} / ${a.goal}</small>`:''}</div>`; }).join('')}</div>`;
 }
-function renderDebrief(){ showOverlay(`${G.lastResult}${upgradesHtml()}<div class="btnrow"><button class="go" data-go="next">Next mission</button><button class="go alt" data-go="record:debrief">Service record</button><button class="go alt" data-go="achs:debrief">Achievements</button></div>`); }
+function renderDebrief(keep=false){ showOverlay(`${G.lastResult}${upgradesHtml()}<div class="btnrow"><button class="go" data-go="next">Next mission</button><button class="go alt" data-go="record:debrief">Service record</button><button class="go alt" data-go="achs:debrief">Achievements</button></div>`, keep); }
 function gameOver(){
   G.state='over';
   G.total+=G.stats.tons; saveBest(); clearCareer();
